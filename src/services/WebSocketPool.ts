@@ -1,12 +1,15 @@
 import EventEmitter from "events";
 import WebSocket from "ws";
 import { getRelays } from "./env";
+import Keyv from "keyv";
+import crypto from "crypto";
 
 class WebSocketPool extends EventEmitter {
     servers: { url: string; attempts: number; timeout: NodeJS.Timeout | null; }[];
     maxAttempts: number;
     resetTimeout: number;
     sockets: { [url: string]: WebSocket };
+    cache: Keyv;
 
     constructor(servers: string[], maxAttempts = 5, resetTimeout = 600_000) {
         super();
@@ -14,6 +17,7 @@ class WebSocketPool extends EventEmitter {
         this.maxAttempts = maxAttempts;
         this.resetTimeout = resetTimeout;
         this.sockets = {};
+        this.cache = new Keyv();
 
         this.connectAll();
     }
@@ -50,8 +54,14 @@ class WebSocketPool extends EventEmitter {
             this.emit("open");
         });
 
-        socket.on("message", (data: Buffer) => {
+        socket.on("message", async (data: Buffer) => {
             const message = Buffer.from(data).toString();
+            const messageHash = crypto.createHash('sha256').update(message).digest('hex');
+
+            if (await this.cache.get(messageHash)) {
+                return;
+            }
+            await this.cache.set(messageHash, message, 6000);
             this.emit("message", message);
         });
 
