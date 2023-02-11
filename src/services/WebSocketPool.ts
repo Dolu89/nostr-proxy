@@ -21,9 +21,7 @@ class WebSocketPool extends EventEmitter {
         this.resetTimeout = resetTimeout;
         this.sockets = {};
         const redis = getRedis()
-        console.log(redis)
         this.cache = redis !== null ? new Keyv(redis) : new Keyv();
-
 
         this.connectAll();
     }
