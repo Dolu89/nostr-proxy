@@ -18,7 +18,7 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     },
     wsHandler: (connection, req) => {
       connection.socket.on('message', async (message: WebSocket.RawData) => {
-        await WebSocketPool.broadcast(message.toString(), connection.socket, req.id)
+        await WebSocketPool.broadcastToRelays(message.toString(), connection.socket, req.id)
       })
       WebSocketPool.on(`message:${req.id}`, (message: string) => {
         connection.socket.send(message)

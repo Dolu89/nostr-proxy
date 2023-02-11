@@ -3,11 +3,9 @@ import WebSocket from "ws";
 import { getRelays } from "./env";
 import Keyv from "keyv";
 import crypto from "crypto";
-import clone from "lodash/clone";
-import NostrEvent, { EventType } from "./Event";
+import { parseEvent } from "./Event";
 
 class WebSocketPool extends EventEmitter {
-    private proxyEventIdSeparator = "-proxy-";
 
     servers: { url: string; attempts: number; timeout: NodeJS.Timeout | null; }[];
     maxAttempts: number;
@@ -66,8 +64,16 @@ class WebSocketPool extends EventEmitter {
                 return;
             }
             await this.cache.set(messageHash, message, 6000);
-            const clientId = await this.getRequestIdFromEvent(message);
-            this.emit(`message:${clientId}`, await this.restoreInitialSubscriptionId(message));
+
+            // const clientId = await this.getRequestIdFromEvent(message);
+            const event = parseEvent(message);
+            const initialSubscriptionId: string | null = await this.cache.get(event.proxySubscriptionId);
+            if (initialSubscriptionId) {
+                this.emit(`message:${event.clientId}`, event.getNostrEventForClient(initialSubscriptionId));
+            }
+            else {
+                console.error(`Subscription ID not found for client ${event.clientId}`)
+            }
         });
 
         socket.on("close", () => {
@@ -84,127 +90,19 @@ class WebSocketPool extends EventEmitter {
         });
     }
 
-    public async broadcast(data: string, exclude: WebSocket, clientId: string) {
+    public async broadcastToRelays(message: string, exclude: WebSocket, clientId: string) {
         for (const socket of Object.values(this.sockets)) {
             if (socket !== exclude) {
-                const message = await this.prepareMessageForClient(data, clientId);
-                if (!message) return;
-                socket.send(Buffer.from(message));
+                const event = parseEvent(message, clientId)
+                await this.cache.set(event.proxySubscriptionId, event.subscriptionId, 6000);
+                const messageBuffer = Buffer.from(event.getNostrEventForRelay());
+                socket.send(messageBuffer);
             }
         }
     }
 
-    ///
-    /// We need to change Subscription ID to be unique per client
-    /// [..., SubscriptionID, ...] => [..., SubscriptionID-proxy-clientId, ...]
-    /// SubscriptionID is always in the 2nd position
-    ///
+    
 
-    private async getRequestIdFromEvent(event: string) {
-        const eventJson = JSON.parse(event);
-        if (eventJson.length === 0) {
-            return null;
-        }
-
-        if (eventJson[0] === EventType.Request ||
-            eventJson[0] === EventType.Close ||
-            eventJson[0] === EventType.Eose ||
-            eventJson[0] === EventType.Event
-        ) {
-            const parts = eventJson[1].split(this.proxyEventIdSeparator);
-            return parts[parts.length - 1];
-        }
-        else if (eventJson[0] === EventType.Ok) {
-            const clientId = await this.cache.get(eventJson[1])
-            if (!clientId) {
-                throw new Error(`ClientId not found for proxy event id: ${event}`);
-            }
-            return clientId;
-        }
-        else {
-            console.error(`No request id found for event: ${event}`)
-            return null;
-        }
-
-    }
-
-    private async getInitialSubscriptionIdFromCache(event: string): Promise<{ cacheKey: string, subId: string } | null> {
-        const eventJson = JSON.parse(event);
-        if (eventJson.length === 0) {
-            return null;
-        }
-        const proxySubId = eventJson[1]
-
-        const initialSubId = await this.cache.get(proxySubId)
-        if (!initialSubId) {
-            throw new Error(`Initial subscription id not found for proxy subscription id: ${proxySubId}`);
-        }
-        return { cacheKey: proxySubId, subId: initialSubId }
-    }
-
-    private async restoreInitialSubscriptionId(event: string) {
-        const eventJson = JSON.parse(event);
-        if (eventJson.length === 0) {
-            throw new Error("Invalid event");
-        }
-
-        if (eventJson[0] === EventType.Request ||
-            eventJson[0] === EventType.Close ||
-            eventJson[0] === EventType.Eose ||
-            eventJson[0] === EventType.Event) {
-            const cachedResult = await this.getInitialSubscriptionIdFromCache(event);
-
-            // If we can't find the initial subscription id, we just return the event as is
-            if (!cachedResult) return event;
-
-            eventJson[1] = cachedResult.subId;
-            return JSON.stringify(eventJson);
-        }
-        else {
-            return event;
-        }
-    }
-
-    private async prepareMessageForClient(message: string, clientId: string) {
-        const messageJson = JSON.parse(message);
-        if (messageJson.length === 0) {
-            return null;
-        }
-
-        const eventType = NostrEvent.getEventType(messageJson[0]);
-
-        // Changing subscription id only for request and close events
-        // it's used to identify the client that sent the request
-        if (eventType === EventType.Request || eventType === EventType.Close) {
-            const postSubId = `${this.proxyEventIdSeparator}${clientId}`;
-            let oldSubId = clone(messageJson[1]);
-            let newSubId = clone(messageJson[1]);
-
-            // truncate intial subscription id because some relay servers don't like it
-            // https://github.com/hoytech/strfry/blob/HEAD/src/Subscription.h#L11
-            if (oldSubId.length > 63 || oldSubId.length + postSubId.length > 63) {
-                // truncate to 63 characters
-                newSubId = oldSubId.slice(0, 63);
-                // remove enough characters to put the postSubId at the end
-                newSubId = newSubId.slice(0, newSubId.length - postSubId.length);
-            }
-
-            newSubId = `${newSubId}${postSubId}`;
-
-            // Caching the subscription id so we can use it later to send it back to the client
-            await this.cache.set(newSubId, oldSubId);
-
-            messageJson[1] = newSubId;
-
-            return JSON.stringify(messageJson);
-        }
-        // Events sent do not contains subscription id. We need to use event ID to identify the client
-        else if (eventType === EventType.Event) {
-            const eventId = messageJson[1].id;
-            await this.cache.set(eventId, clientId);
-        }
-        return message
-    }
     public getRelays() {
         return Object.keys(this.sockets);
     }
