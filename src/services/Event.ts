@@ -62,7 +62,7 @@ export class Event {
             this.source = EventSource.Relay;
 
             this.clientId = "";
-            if (this.type !== EventType.Ok) {
+            if (this.type !== EventType.Ok && this.type !== EventType.Notice) {
                 const parts = this.subscriptionId.split(proxyEventIdSeparator);
                 this.clientId = parts[parts.length - 1];
             }
