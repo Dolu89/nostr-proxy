@@ -3,7 +3,7 @@ import WebSocket from "ws";
 import { getRelays } from "./env";
 import Keyv from "keyv";
 import crypto from "crypto";
-import { parseEvent } from "./Event";
+import { EventType, parseEvent } from "./Event";
 
 class WebSocketPool extends EventEmitter {
 
@@ -67,15 +67,23 @@ class WebSocketPool extends EventEmitter {
             }
             await this.cache.set(messageHash, message, 6000);
 
-            // const clientId = await this.getRequestIdFromEvent(message);
             const event = parseEvent(message);
             const initialSubscriptionId: string | null = await this.cache.get(event.proxySubscriptionId);
+
+            let clientId = event.clientId;
+            // Special case for created events
+            if (event.type === EventType.Ok) {
+                clientId = await this.cache.get(`clientId:${event.subscriptionId}`);
+                await this.cache.delete(`clientId:${event.subscriptionId}`);
+            }
+
             if (initialSubscriptionId) {
-                this.emit(`message:${event.clientId}`, event.getNostrEventForClient(initialSubscriptionId));
+                this.emit(`message:${clientId}`, event.getNostrEventForClient(initialSubscriptionId));
             }
-            else {
-                console.error(`Subscription ID not found for client ${event.clientId}`)
-            }
+            // TODO: Known issue: Global feeds are not retrieved from the cache because of the continue data flow
+            // else {
+            //     console.error(`Subscription ID not found for client ${event.clientId}. Event: ${JSON.stringify(event)}`)
+            // }
         });
 
         socket.on("close", () => {
@@ -97,13 +105,17 @@ class WebSocketPool extends EventEmitter {
             if (socket !== exclude) {
                 const event = parseEvent(message, clientId)
                 await this.cache.set(event.proxySubscriptionId, event.subscriptionId, 6000);
+
+                // Special case for PUSH events
+                if (event.type === EventType.Event) {
+                    await this.cache.set(`clientId:${event.subscriptionId}`, clientId, 6000);
+                }
+
                 const messageBuffer = Buffer.from(event.getNostrEventForRelay());
                 socket.send(messageBuffer);
             }
         }
     }
-
-
 
     public getRelays() {
         return Object.keys(this.sockets);

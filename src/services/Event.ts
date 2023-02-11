@@ -9,6 +9,11 @@ export enum EventType {
     Ok = "OK",
 }
 
+export enum EventSource {
+    Client = "CLIENT",
+    Relay = "RELAY",
+}
+
 const proxyEventIdSeparator = "-proxy-";
 
 export class Event {
@@ -18,6 +23,7 @@ export class Event {
 
     private nostrEvent: string;
     public clientId: string;
+    public source: EventSource;
 
     constructor(type: EventType, subscriptionId: string, nostrEvent: string, clientId?: string) {
         this.type = type;
@@ -27,6 +33,8 @@ export class Event {
 
         // If clientId is provided, it means it's a CLIENT to RELAY event, clientId is the unique id of the query
         if (clientId) {
+            this.source = EventSource.Client;
+
             // suffixSubId should be like this -proxy-req-X
             const suffixSubId = `${proxyEventIdSeparator}${clientId}`;
             const oldSubId = clone(subscriptionId);
@@ -43,11 +51,22 @@ export class Event {
 
             this.clientId = clientId;
             this.proxySubscriptionId = newSubId;
+
+            // Reset proxySubscriptionId for PUSH Event
+            if (this.type === EventType.Event) {
+                this.proxySubscriptionId = subscriptionId;
+            }
         }
-        // If not provided, it means it's a RELAY to CLIENT event, clientId is in the nostrEvent
+        // If not provided, it means it's a RELAY to CLIENT event, clientId is in the nostrEvent, Except for Created Event (type === EventType.Ok)
         else {
-            const parts = this.subscriptionId.split(proxyEventIdSeparator);
-            this.clientId = parts[parts.length - 1];
+            this.source = EventSource.Relay;
+
+            this.clientId = "";
+            if (this.type !== EventType.Ok) {
+                const parts = this.subscriptionId.split(proxyEventIdSeparator);
+                this.clientId = parts[parts.length - 1];
+            }
+
         }
     }
 
