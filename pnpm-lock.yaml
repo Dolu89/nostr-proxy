@@ -6,6 +6,7 @@ specifiers:
   '@fastify/view': ^7.4.1
   '@fastify/websocket': ^7.1.2
   '@types/ejs': ^3.1.1
+  '@types/lodash': ^4.14.191
   '@types/node': ^18.0.0
   '@types/tap': ^15.0.5
   '@types/ws': ^8.5.4
@@ -16,6 +17,7 @@ specifiers:
   fastify-plugin: ^4.0.0
   fastify-tsconfig: ^1.0.1
   keyv: ^4.5.2
+  lodash: ^4.17.21
   tap: ^16.1.0
   ts-node: ^10.4.0
   typescript: ^4.5.4
@@ -31,10 +33,12 @@ dependencies:
   fastify-cli: 5.7.1
   fastify-plugin: 4.5.0
   keyv: 4.5.2
+  lodash: 4.17.21
   ws: 8.12.0
 
 devDependencies:
   '@types/ejs': 3.1.1
+  '@types/lodash': 4.14.191
   '@types/node': 18.13.0
   '@types/tap': 15.0.8
   '@types/ws': 8.5.4
@@ -391,6 +395,10 @@ packages:
 
   /@types/ejs/3.1.1:
     resolution: {integrity: sha512-RQul5wEfY7BjWm0sYY86cmUN/pcXWGyVxWX93DFFJvcrxax5zKlieLwA3T77xJGwNcZW0YW6CYG70p1m8xPFmA==}
+    dev: true
+
+  /@types/lodash/4.14.191:
+    resolution: {integrity: sha512-BdZ5BCCvho3EIXw6wUCXHe7rS53AIDPLE+JzwgT+OsJk53oBfbSmZZ7CX4VaRoN78N+TJpFi9QPlfIVNmJYWxQ==}
     dev: true
 
   /@types/node/18.13.0:
@@ -1402,7 +1410,6 @@ packages:
 
   /lodash/4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
-    dev: true
 
   /lru-cache/5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
