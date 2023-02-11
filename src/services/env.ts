@@ -1,5 +1,6 @@
 let proxyUrl = "";
 let relays: string[] = [];
+let redis: string | null = null;
 
 export function validateEnv() {
     if (!process.env.PROXY_URL) {
@@ -18,6 +19,10 @@ export function validateEnv() {
         console.error("A problem occured while parsing relays");
         process.exit(1);
     }
+
+    if (process.env.REDIS) {
+        redis = process.env.REDIS
+    }
 }
 
 export function getRelays() {
@@ -26,4 +31,8 @@ export function getRelays() {
 
 export function getProxyUrl() {
     return proxyUrl;
+}
+
+export function getRedis() {
+    return redis;
 }
