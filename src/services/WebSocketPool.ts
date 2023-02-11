@@ -59,26 +59,30 @@ class WebSocketPool extends EventEmitter {
         });
 
         socket.on("message", async (data: Buffer) => {
-            const message = Buffer.from(data).toString();
-            const messageHash = crypto.createHash('sha256').update(message).digest('hex');
+            try {
+                const message = Buffer.from(data).toString();
+                const messageHash = crypto.createHash('sha256').update(message).digest('hex');
 
-            if (await this.cache.get(messageHash)) {
-                return;
-            }
-            await this.cache.set(messageHash, message, 6000);
+                if (await this.cache.get(messageHash)) {
+                    return;
+                }
+                await this.cache.set(messageHash, message, 6000);
 
-            const event = parseEvent(message);
-            const initialSubscriptionId: string | null = await this.cache.get(event.proxySubscriptionId);
+                const event = parseEvent(message);
+                const initialSubscriptionId: string | null = await this.cache.get(event.proxySubscriptionId);
 
-            let clientId = event.clientId;
-            // Special case for created events
-            if (event.type === EventType.Ok) {
-                clientId = await this.cache.get(`clientId:${event.subscriptionId}`);
-                await this.cache.delete(`clientId:${event.subscriptionId}`);
-            }
+                let clientId = event.clientId;
+                // Special case for created events
+                if (event.type === EventType.Ok) {
+                    clientId = await this.cache.get(`clientId:${event.subscriptionId}`);
+                    await this.cache.delete(`clientId:${event.subscriptionId}`);
+                }
 
-            if (initialSubscriptionId) {
-                this.emit(`message:${clientId}`, event.getNostrEventForClient(initialSubscriptionId));
+                if (initialSubscriptionId) {
+                    this.emit(`message:${clientId}`, event.getNostrEventForClient(initialSubscriptionId));
+                }
+            } catch (error) {
+                console.error(`Event can't be sent back to the client: ${error}`);
             }
             // TODO: Known issue: Global feeds are not retrieved from the cache because of the continue data flow
             // else {
@@ -103,16 +107,20 @@ class WebSocketPool extends EventEmitter {
     public async broadcastToRelays(message: string, exclude: WebSocket, clientId: string) {
         for (const socket of Object.values(this.sockets)) {
             if (socket !== exclude) {
-                const event = parseEvent(message, clientId)
-                await this.cache.set(event.proxySubscriptionId, event.subscriptionId, 6000);
+                try {
+                    const event = parseEvent(message, clientId)
+                    await this.cache.set(event.proxySubscriptionId, event.subscriptionId, 6000);
 
-                // Special case for PUSH events
-                if (event.type === EventType.Event) {
-                    await this.cache.set(`clientId:${event.subscriptionId}`, clientId, 6000);
+                    // Special case for PUSH events
+                    if (event.type === EventType.Event) {
+                        await this.cache.set(`clientId:${event.subscriptionId}`, clientId, 6000);
+                    }
+
+                    const messageBuffer = Buffer.from(event.getNostrEventForRelay());
+                    socket.send(messageBuffer);
+                } catch (error) {
+                    console.error(`Event can't be sent to the relay: ${JSON.stringify(error)}`);
                 }
-
-                const messageBuffer = Buffer.from(event.getNostrEventForRelay());
-                socket.send(messageBuffer);
             }
         }
     }
