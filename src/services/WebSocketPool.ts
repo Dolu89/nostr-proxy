@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import WebSocket from "ws";
-import { getRelays } from "./env";
+import { getRedis, getRelays } from "./env";
 import Keyv from "keyv";
 import crypto from "crypto";
 import { EventType, parseEvent } from "./Event";
@@ -20,7 +20,10 @@ class WebSocketPool extends EventEmitter {
         this.maxAttempts = maxAttempts;
         this.resetTimeout = resetTimeout;
         this.sockets = {};
-        this.cache = new Keyv();
+        const redis = getRedis()
+        console.log(redis)
+        this.cache = redis !== null ? new Keyv(redis) : new Keyv();
+
 
         this.connectAll();
     }
