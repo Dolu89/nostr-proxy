@@ -17,12 +17,14 @@ const root: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       reply.view("/index.ejs", { connected, disconnected, total, proxyUrl });
     },
     wsHandler: (connection, req) => {
-      connection.socket.on('message', async (message: WebSocket.RawData) => {
-        await WebSocketPool.broadcastToRelays(message.toString(), connection.socket, req.id)
-      })
-      WebSocketPool.on(`message:${req.id}`, (message: string) => {
-        connection.socket.send(message)
-      })
+      if (WebSocketPool.isReady) {
+        connection.socket.on('message', async (message: WebSocket.RawData) => {
+          await WebSocketPool.broadcastToRelays(message.toString(), connection.socket, req.id)
+        })
+        WebSocketPool.on(`message:${req.id}`, (message: string) => {
+          connection.socket.send(message)
+        })
+      }
     }
   })
 

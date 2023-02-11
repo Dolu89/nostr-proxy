@@ -12,6 +12,7 @@ class WebSocketPool extends EventEmitter {
     resetTimeout: number;
     sockets: { [url: string]: WebSocket };
     cache: Keyv;
+    isReady = false;
 
     constructor(servers: string[], maxAttempts = 5, resetTimeout = 600_000) {
         super();
@@ -28,6 +29,7 @@ class WebSocketPool extends EventEmitter {
         for (const server of this.servers) {
             this.connect(server.url);
         }
+        this.isReady = true;
     }
 
     private connect(url: string) {
@@ -101,7 +103,7 @@ class WebSocketPool extends EventEmitter {
         }
     }
 
-    
+
 
     public getRelays() {
         return Object.keys(this.sockets);
