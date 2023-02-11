@@ -1,0 +1,38 @@
+version: '3.7'
+
+
+services:
+  nostr-proxy:
+    image: nostr-proxy
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3003:3000"
+    environment:
+      REDIS: redis://default:nostr-proxy@redis:6379
+    volumes:
+      - ./.env:/usr/src/app/.env
+    depends_on:
+      - redis
+    networks:
+      - nostr-network
+  redis:
+    image: redis:7.0.5-alpine3.16
+    command: redis-server --loglevel warning --requirepass nostr-proxy
+    restart: always
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping", "|", "grep", "PONG" ]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nostr-network
+
+networks:
+  nostr-network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.2.0.0/16
+
