@@ -10,3 +10,10 @@ Route.get('/', async ({ view }) => {
   const relaysCount = relays.length
   return view.render('welcome', { proxyUrl, relays, relaysCount })
 })
+
+Route.get('/stats', async () => {
+  if (!NostrSocket.booted) return { message: 'Nostr Proxy is booting...' }
+
+  const stats = await NostrSocket.getStats()
+  return stats
+})
