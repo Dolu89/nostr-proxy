@@ -9,32 +9,44 @@ In the project directory, run:
 pnpm install
 ```
 
-Edit your env variables. You can use a `.env` file by copying the file `.env.example` in the root directory, or you can set your variables into your hosting provider UI.
+Edit your env variables. You can use a `.env` file by copying the file `.env.example` in the root directory, or you can set your variables into your hosting provider UI.\
+For `APP_KEY`, you can use the following command to generate one `node ace generate:key`
 
 ```
+PORT=3333
+HOST=0.0.0.0
+NODE_ENV=development
+APP_KEY=unique-key
+DRIVE_DISK=local
+SESSION_DRIVER=cookie
+CACHE_VIEWS=false
 PROXY_URL=wss://your-proxy.com
 RELAYS=wss://relay1.com,wss://relay2.com,wss://relay.com
 ```
 
 ## Launch
 
-### `npm run dev`
+### Development
 
-To start the app in dev mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.\
-Use `ws://localhost:3000` into your Nostr client.
+`npm run dev` to start the app in dev mode.\
+Open [http://localhost:3333](http://localhost:3333) to view it in the browser.\
+Use `ws://localhost:3333` into your Nostr client.
 
-### `npm start`
+### Production
 
-For production mode
+```
+npm run build
+cd build
+pnpm install --prod
+node server.js
+```
 
-### `npm run test` (TODO)
+### Running tests
 
-Run the test cases.
+TODO
 
 ## Known issues
-- Global feed don't load after the cache is removed
-- NOTICE is not send to the right client
+- Sometimes the proxy runs out of memory. Please help.
 
 ## Learn More
 

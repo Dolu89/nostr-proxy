@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="lightning" content="lnurlp:dolu89@ln.tips" />
+  <meta property="og:image" content="https://pbs.twimg.com/profile_images/1577320325158682626/igGerO9A_400x400.jpg" />
+  <link rel="preconnect" href="https://api.fonts.coollabs.io" crossorigin>
+  <link href="https://api.fonts.coollabs.io/css2?family=Inter:wght@400;500;900&display=swap" rel="stylesheet">
+  <title>Nostr Proxy</title>
+  @entryPointStyles('app')
+  @entryPointScripts('app')
+</head>
+
+<body>
+  <div class="container">
+    <div class="content">
+
+      <div class="header">
+        <h1 class="title">Nostr <span class="gradient">Proxy</span></h1>
+        <span class="subtitle">Using this proxy, you save {{ relaysCount }} WS connections.</span>
+      </div>
+
+      <input type="text" disabled class="copy-text" value="{{proxyUrl}}">
+
+
+      <span>🟢 Connected {{relays.filter(relay => relay.connected).length}}/{{relaysCount}}</span>
+      <ul>
+        @each(relay in relays.filter(relay => relay.connected))
+        <li> {{ relay.url }} </li>
+        @end
+      </ul>
+
+      <span>🔴 Diconnected</span>
+      <ul>
+        @each(relay in relays.filter(relay => !relay.connected))
+        <li> {{ relay.url }} </li>
+        @end
+      </ul>
+    </div>
+
+  </div>
+  <div class="footer">
+    <span> <a href="https://github.com/dolu89/nostr-proxy">Github</a></span>
+    <span>Made with 💩 by Dolu</span>
+    <span>⚡️dolu89@ln.tips</span>
+  </div>
+</body>
+
+</html>

@@ -1,16 +1,24 @@
 {
-  "extends": "fastify-tsconfig",
+  "extends": "adonis-preset-ts/tsconfig.json",
+  "include": ["**/*"],
+  "exclude": ["node_modules", "build"],
   "compilerOptions": {
-    "outDir": "dist",
+    "outDir": "build",
+    "rootDir": "./",
     "sourceMap": true,
-    "esModuleInterop": true
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.ejs"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+    "paths": {
+      "App/*": ["./app/*"],
+      "Config/*": ["./config/*"],
+      "Contracts/*": ["./contracts/*"],
+      "Database/*": ["./database/*"]
+    },
+    "types": [
+      "@adonisjs/core",
+      "@adonisjs/repl",
+      "@adonisjs/session",
+      "@adonisjs/view",
+      "@adonisjs/shield",
+      "@japa/preset-adonis/build/adonis-typings"
+    ]
+  }
 }
