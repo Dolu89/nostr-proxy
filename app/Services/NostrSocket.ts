@@ -145,6 +145,21 @@ class NostrSocket {
         return relays
     }
 
+    public async getStats() {
+        const relays = await this.getRelays()
+        return {
+            connectedClients: WsServer.ws.clients.size,
+            internalInfos: {
+                subs: Object.keys(this._subs).length,
+                cache: Object.keys(this._cache).length,
+            },
+            relays: {
+                connected: relays.filter(relay => relay.connected).length,
+                total: relays.length
+            }
+        }
+    }
+
 }
 
 export default new NostrSocket()
