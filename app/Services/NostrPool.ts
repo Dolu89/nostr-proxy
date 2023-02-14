@@ -81,7 +81,11 @@ export class NostrPool {
         }
         const hasKnownIds = async (id: string) => {
             if (_knownIds instanceof Keyv) {
-                return await _knownIds.has(knowIdsId)
+                const sets = await _knownIds.get(knowIdsId)
+                if (sets) {
+                    return sets.includes(id)
+                }
+                return false
             }
             return _knownIds.has(id)
         }
@@ -132,7 +136,7 @@ export class NostrPool {
             },
             unsub() {
                 if (_knownIds instanceof Keyv) {
-                    _knownIds.clear()
+                    _knownIds.clear().catch(console.error)
                 }
                 subs.forEach(sub => sub.unsub())
             },
