@@ -15,16 +15,16 @@ class NostrSocket {
 
     private _relays: string[]
     private _pool: SimplePool
-    private _cache: { [key: string]: string }
-    private _subs: { [subscriptionId: string]: Sub }
+    private _cache: Map<string, string>
+    private _subs: Map<string, Sub>
 
     constructor() {
         this.booted = false
         this._relays = [...Env.get('RELAYS').split(',')]
         this._pool = new SimplePool()
 
-        this._cache = {}
-        this._subs = {}
+        this._cache = new Map()
+        this._subs = new Map()
     }
 
     public async boot() {
@@ -62,35 +62,36 @@ class NostrSocket {
                         const subscriptionId = parsed[1]
 
                         // Close old subscription if subscriptionId already exists
-                        if (this._cache[`${socket.connectionId}:${subscriptionId}`]) {
-                            const oldRandomSubscriptionId = this._cache[`${socket.connectionId}:${subscriptionId}`]
-                            this._subs[oldRandomSubscriptionId].unsub()
-                            delete this._subs[oldRandomSubscriptionId]
+                        const oldRandomSubscriptionId = this._cache.get(`${socket.connectionId}:${subscriptionId}`)
+                        if (oldRandomSubscriptionId) {
+                            this._subs.get(oldRandomSubscriptionId)?.unsub()
+                            this._subs.delete(oldRandomSubscriptionId)
                         }
 
-                        this._cache[`${socket.connectionId}:${subscriptionId}`] = randomSubscriptionId
+                        this._cache.set(`${socket.connectionId}:${subscriptionId}`, randomSubscriptionId)
 
-                        this._subs[randomSubscriptionId] = this._pool.sub(
+                        this._subs.set(randomSubscriptionId, this._pool.sub(
                             this._relays,
                             [filters],
                             { id: randomSubscriptionId }
-                        )
+                        ))
 
-                        this._subs[randomSubscriptionId].on('event', (data: Event) => {
+                        this._subs.get(randomSubscriptionId)?.on('event', (data: Event) => {
                             socket.send(JSON.stringify(["EVENT", subscriptionId, data]))
                         })
-                        this._subs[randomSubscriptionId].on('eose', () => {
+                        this._subs.get(randomSubscriptionId)?.on('eose', () => {
                             socket.send(JSON.stringify(["EOSE", subscriptionId]))
                         })
                     }
                     else if (parsed[0] === 'CLOSE') {
                         const subscriptionId = parsed[1]
-                        const randomSubscriptionId = this._cache[`${socket.connectionId}:${subscriptionId}`]
-                        delete this._cache[`${socket.connectionId}:${subscriptionId}`]
 
-                        if (this._subs[randomSubscriptionId]) {
-                            this._subs[randomSubscriptionId].unsub()
-                            delete this._subs[randomSubscriptionId]
+                        const randomSubscriptionId = this._cache.get(`${socket.connectionId}:${subscriptionId}`)
+                        if (randomSubscriptionId) {
+                            this._subs.get(randomSubscriptionId)?.unsub()
+                            this._subs.delete(randomSubscriptionId)
+
+                            this._cache.delete(`${socket.connectionId}:${subscriptionId}`)
                         }
                     }
                     else if (parsed[0] === 'EVENT') {
@@ -103,18 +104,18 @@ class NostrSocket {
                         )
                     }
                     else {
-                        throw new Error(`Invalid event ${data}`)
+                        throw new Error(`Invalid event ${data.toString()}`)
                     }
                 } catch (error) {
-                    console.error('Unexpected error in Socket message: ', error)
-                    for (const key of Object.keys(this._cache)) {
+                    console.error('Unexpected error in Socket message: ', data.toString(), error)
+                    for (const key of this._cache.keys()) {
                         if (key.startsWith(socket.connectionId)) {
-                            const randomSubscriptionId = this._cache[key]
-                            if (this._subs[randomSubscriptionId]) {
-                                this._subs[randomSubscriptionId].unsub()
-                                delete this._subs[randomSubscriptionId]
+                            const randomSubscriptionId = this._cache.get(key)
+                            if (randomSubscriptionId) {
+                                this._subs.get(randomSubscriptionId)?.unsub()
+                                this._subs.delete(randomSubscriptionId)
                             }
-                            delete this._cache[key]
+                            this._cache.delete(key)
                         }
                     }
                     socket.close(3000, error.message)
@@ -122,14 +123,14 @@ class NostrSocket {
             })
 
             socket.on('close', async () => {
-                for (const key of Object.keys(this._cache)) {
+                for (const key of this._cache.keys()) {
                     if (key.startsWith(socket.connectionId)) {
-                        const randomSubscriptionId = this._cache[key]
-                        if (this._subs[randomSubscriptionId]) {
-                            this._subs[randomSubscriptionId].unsub()
-                            delete this._subs[randomSubscriptionId]
+                        const randomSubscriptionId = this._cache.get(key)
+                        if (randomSubscriptionId) {
+                            this._subs.get(randomSubscriptionId)?.unsub()
+                            this._subs.delete(randomSubscriptionId)
                         }
-                        delete this._cache[key]
+                        this._cache.delete(key)
                     }
                 }
             })
@@ -150,8 +151,8 @@ class NostrSocket {
         return {
             connectedClients: WsServer.ws.clients.size,
             internalInfos: {
-                subs: Object.keys(this._subs).length,
-                cache: Object.keys(this._cache).length,
+                subs: this._subs.size,
+                cache: this._cache.size,
             },
             relays: {
                 connected: relays.filter(relay => relay.connected).length,
