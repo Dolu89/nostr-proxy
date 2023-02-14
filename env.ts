@@ -25,4 +25,5 @@ export default Env.rules({
   NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),
   PROXY_URL: Env.schema.string(),
   RELAYS: Env.schema.string(),
+  REDIS_CONNECTION: Env.schema.string.optional(),
 })

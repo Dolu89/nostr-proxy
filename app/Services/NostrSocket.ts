@@ -1,9 +1,10 @@
 import "websocket-polyfill"
-import { SimplePool, Event, Filter, Sub } from "nostr-tools"
+import { Event, Filter, Sub } from "nostr-tools"
 import { v4 as uuidv4 } from "uuid";
 import Env from "@ioc:Adonis/Core/Env"
 import WsServer from "./WsServer";
 import { WebSocket } from "ws";
+import { NostrPool } from "./NostrPool";
 
 interface CustomWebsocket extends WebSocket {
     connectionId: string
@@ -14,14 +15,14 @@ class NostrSocket {
     public booted: boolean
 
     private _relays: string[]
-    private _pool: SimplePool
+    private _pool: NostrPool
     private _cache: Map<string, string>
     private _subs: Map<string, Sub>
 
     constructor() {
         this.booted = false
         this._relays = [...Env.get('RELAYS').split(',')]
-        this._pool = new SimplePool()
+        this._pool = new NostrPool()
 
         this._cache = new Map()
         this._subs = new Map()
