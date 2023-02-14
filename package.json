@@ -67,7 +67,7 @@
     "@adonisjs/view": "^6.1.0",
     "@types/uuid": "^9.0.0",
     "node-cron": "^3.0.2",
-    "nostr-tools": "^1.3.2",
+    "nostr-tools": "1.4.1",
     "proxy-addr": "^2.0.7",
     "reflect-metadata": "^0.1.13",
     "source-map-support": "^0.5.21",
