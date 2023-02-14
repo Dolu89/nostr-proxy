@@ -1,22 +1,11 @@
 // Customized SimplePool.ts from https://github.com/nbd-wtf/nostr-tools
 
-import { Filter, Pub, Relay, relayInit, Sub, SubscriptionOptions, Event } from "nostr-tools"
 import Env from "@ioc:Adonis/Core/Env"
 import Keyv from "keyv"
-
-export function normalizeURL(url: string): string {
-    let p = new URL(url)
-    p.pathname = p.pathname.replace(/\/+/g, '/')
-    if (p.pathname.endsWith('/')) p.pathname = p.pathname.slice(0, -1)
-    if (
-        (p.port === '80' && p.protocol === 'ws:') ||
-        (p.port === '443' && p.protocol === 'wss:')
-    )
-        p.port = ''
-    p.searchParams.sort()
-    p.hash = ''
-    return p.toString()
-}
+import { Filter, Event } from "nostr-tools"
+import { Pub, Relay, relayInit, Sub, SubscriptionOptions } from "../Models/Relay"
+import { normalizeURL } from "./NostrTools"
+import { v4 as uuidv4 } from "uuid";
 
 export class NostrPool {
     private _conn: { [url: string]: Relay }
@@ -25,7 +14,7 @@ export class NostrPool {
     constructor() {
         const useRedis = Env.get("REDIS_CONNECTION")
         if (useRedis) {
-            this._seenOn = new Keyv(useRedis, {});
+            this._seenOn = new Keyv(useRedis, { namespace: "nostr-seen-on" });
         }
         else {
             this._seenOn = {}
@@ -73,14 +62,36 @@ export class NostrPool {
     }
 
     sub(relays: string[], filters: Filter[], opts?: SubscriptionOptions): Sub {
-        let _knownIds: Set<string> = new Set()
-        let modifiedOpts = opts || {}
-        modifiedOpts.alreadyHaveEvent = (id, url) => {
-            this._getSeenOn(id).then(set => {
-                set.add(url)
-                this._setSeenOn(id, set).catch(console.error)
-            }).catch(console.error)
+        let _knownIds: Set<string> | Keyv;
+        const knowIdsId = uuidv4()
+        if (Env.get("REDIS_CONNECTION")) {
+            _knownIds = new Keyv(Env.get("REDIS_CONNECTION"), { namespace: knowIdsId });
+        }
+        else {
+            _knownIds = new Set()
+        }
+
+        const addKnownIds = async (id: string) => {
+            if (_knownIds instanceof Keyv) {
+                let currentIds = await _knownIds.get(knowIdsId)
+                if (!currentIds) currentIds = []
+                return await _knownIds.set(knowIdsId, [...currentIds, id], 5 * 1000 * 60)
+            }
+            return _knownIds.add(id)
+        }
+        const hasKnownIds = async (id: string) => {
+            if (_knownIds instanceof Keyv) {
+                return await _knownIds.has(knowIdsId)
+            }
             return _knownIds.has(id)
+        }
+
+        let modifiedOpts = opts || {}
+        modifiedOpts.alreadyHaveEvent = async (id, url) => {
+            const set = await this._getSeenOn(id)
+            set.add(url)
+            await this._setSeenOn(id, set)
+            return await hasKnownIds(id)
         }
 
         let subs: Sub[] = []
@@ -99,7 +110,7 @@ export class NostrPool {
             if (!r) return
             let s = r.sub(filters, modifiedOpts)
             s.on('event', (event: Event) => {
-                _knownIds.add(event.id as string)
+                addKnownIds(event.id as string)
                 for (let cb of eventListeners.values()) cb(event)
             })
             s.on('eose', () => {
@@ -120,6 +131,9 @@ export class NostrPool {
                 return greaterSub
             },
             unsub() {
+                if (_knownIds instanceof Keyv) {
+                    _knownIds.clear()
+                }
                 subs.forEach(sub => sub.unsub())
             },
             on(type, cb) {

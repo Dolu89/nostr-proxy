@@ -1,10 +1,11 @@
 import "websocket-polyfill"
-import { Event, Filter, Sub } from "nostr-tools"
 import { v4 as uuidv4 } from "uuid";
 import Env from "@ioc:Adonis/Core/Env"
 import WsServer from "./WsServer";
 import { WebSocket } from "ws";
 import { NostrPool } from "./NostrPool";
+import { Sub } from "../Models/Relay";
+import { Filter, Event } from "nostr-tools";
 
 interface CustomWebsocket extends WebSocket {
     connectionId: string
