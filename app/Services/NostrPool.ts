@@ -109,8 +109,8 @@ export class NostrPool {
             let r = await this.ensureRelay(relay)
             if (!r) return
             let s = r.sub(filters, modifiedOpts)
-            s.on('event', (event: Event) => {
-                addKnownIds(event.id as string)
+            s.on('event', async (event: Event) => {
+                await addKnownIds(event.id as string)
                 for (let cb of eventListeners.values()) cb(event)
             })
             s.on('eose', () => {
