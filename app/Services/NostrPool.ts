@@ -36,7 +36,7 @@ class NostrPool {
         const normalizedURL = normalizeURL(relayUrl)
 
         if (this._connections[normalizedURL]?.status === 1) return
-
+        console.log("test", normalizedURL)
         try {
             this._connections[normalizedURL] = relayInit(normalizedURL)
             await this._connections[normalizedURL].connect()
@@ -54,7 +54,7 @@ class NostrPool {
 
     public async sub(relays: string[], filters: Filter[], subscriptionId: string): Promise<EventEmitter> {
         this._verifyInitializedOrDie()
-        await this._ensureRelayConnections(relays)
+        // await this._ensureRelayConnections(relays)
 
         const normalizedURLs = relays.map(normalizeURL)
         const _knownIds = new Set<string>()
@@ -106,7 +106,7 @@ class NostrPool {
     // TODO : Find a solution to unsubscribe from a publish in nostr-tools
     public async publish(relays: string[], event: Event): Promise<EventEmitter> {
         this._verifyInitializedOrDie()
-        await this._ensureRelayConnections(relays)
+        // await this._ensureRelayConnections(relays)
 
         const emitter = new EventEmitter()
 
