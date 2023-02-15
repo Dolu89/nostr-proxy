@@ -95,17 +95,16 @@ export class NostrPool {
         return emitter
     }
 
+    // There is no solution currently to unsubscribe from a publish. It creates a memory leak.
+    // TODO : Find a solution to unsubscribe from a publish in nostr-tools
     public async publish(relays: string[], event: Event): Promise<EventEmitter> {
         this._verifyInitializedOrDie()
         await this._openRelayConnections(relays)
-
-        const _pubs = new Set<Pub>()
 
         const emitter = new EventEmitter()
 
         emitter.on('unsubscribe', () => {
             emitter.removeAllListeners()
-            _pubs.clear()
         })
 
         let seenOn = 0
