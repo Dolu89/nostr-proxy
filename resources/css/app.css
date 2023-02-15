@@ -83,9 +83,17 @@ a:hover {
   left: 0;
   right: 0;
   display: flex;
-  gap: 30px;
+  flex-direction: column;
+  gap: 10px;
   align-items: baseline;
-  justify-content: end;
   background: #000;
   color: #fff;
+}
+
+@media (min-width: 480px) {
+  .footer {
+    flex-direction: row;
+    justify-content: end;
+    gap: 30px;
+  }
 }
