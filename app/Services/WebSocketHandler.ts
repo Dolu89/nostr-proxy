@@ -85,14 +85,14 @@ class WebSocketServer {
                         }
                     }
                     else if (parsed[0] === 'EVENT') {
-                        const event = parsed[1] as unknown as Event
-                        const pub = await this._pool.publish(this._relays, event)
-                        pub.on('ok', () => {
-                            socket.send(JSON.stringify(["OK", event.id, true, ""]))
-                        })
-                        pub.on('failed', (reason: string) => {
-                            socket.send(JSON.stringify(["NOTICE", reason]))
-                        })
+                        // const event = parsed[1] as unknown as Event
+                        // const pub = await this._pool.publish(this._relays, event)
+                        // pub.on('ok', () => {
+                        //     socket.send(JSON.stringify(["OK", event.id, true, ""]))
+                        // })
+                        // pub.on('failed', (reason: string) => {
+                        //     socket.send(JSON.stringify(["NOTICE", reason]))
+                        // })
                     }
                     else {
                         throw new Error(`Invalid event ${data.toString()}`)
