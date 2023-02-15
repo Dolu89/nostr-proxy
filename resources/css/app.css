@@ -6,6 +6,13 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
+body {
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr min-content;
+}
+
 a {
   color: #ce9ffc;
   text-decoration: none;
@@ -22,6 +29,7 @@ a:hover {
   justify-content: space-between;
   width: 100%;
   height: 100%;
+  overflow-y: auto;
 }
 
 .header {
@@ -66,7 +74,6 @@ a:hover {
 
 .footer {
   padding: 10px 30px;
-  position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
