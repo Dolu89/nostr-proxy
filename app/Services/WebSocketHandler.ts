@@ -128,17 +128,8 @@ class WebSocketServer {
         })
     }
 
-    public async getRelays(): Promise<{ url: string, connected: boolean }[]> {
-        let relays: { url: string, connected: boolean }[] = []
-        for (const relayUrl of this._relays) {
-            // const relay = await this._pool.ensureRelay(relayUrl)
-            // relays = [...relays, { url: relay.url, connected: relay.status === 1 ? true : false }]
-        }
-        return relays
-    }
-
-    public async getStats() {
-        const relays = await this.getRelays()
+    public getStats() {
+        const relays = NostrPool.getRelaysStatus()
         return {
             connectedClients: WebSocketInstance.ws.clients.size,
             internalInfos: {

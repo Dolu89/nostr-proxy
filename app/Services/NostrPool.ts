@@ -149,10 +149,24 @@ class NostrPool {
         return emitter
     }
 
-
     private _countConnectedRelays(): number {
         this._verifyInitializedOrDie()
         return Object.values(this._connections).filter(conn => conn.status === 1).length
+    }
+
+    public getRelays(): string[] {
+        this._verifyInitializedOrDie()
+        return Object.keys(this._connections)
+    }
+
+    public getRelaysStatus(): { url: string, connected: boolean }[] {
+        this._verifyInitializedOrDie()
+        return Object.entries(this._connections).map(([url, conn]) => {
+            return {
+                url,
+                connected: conn.status === 1
+            }
+        })
     }
 }
 
