@@ -1,7 +1,7 @@
 import cron from "node-cron";
-import NostrSocket from "../app/Services/NostrSocket";
+import NostrPool from "../app/Services/NostrPool";
 
 cron.schedule('*/5 * * * *', async () => {
-    if (!NostrSocket.booted) return
-    await NostrSocket.initRelays()
+    if (!NostrPool.isInitialized) return
+    await NostrPool.init()
 });

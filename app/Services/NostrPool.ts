@@ -1,225 +1,173 @@
-// Customized SimplePool.ts from https://github.com/nbd-wtf/nostr-tools
 
-import Env from "@ioc:Adonis/Core/Env"
-import Keyv from "keyv"
-import { Filter, Event } from "nostr-tools"
-import { Pub, Relay, relayInit, Sub, SubscriptionOptions } from "../Models/Relay"
+import { Filter, Event, Relay, relayInit, Sub } from "nostr-tools"
 import { normalizeURL } from "./NostrTools"
-import { v4 as uuidv4 } from "uuid";
+import EventEmitter from "node:events"
+import Env from "@ioc:Adonis/Core/Env"
 
-export class NostrPool {
-    private _conn: { [url: string]: Relay }
-    private _seenOn: { [id: string]: Set<string> } | Keyv // a map of all events we've seen in each relay
+class NostrPool {
+    public isInitialized: boolean
+    private _relaysUrls: string[]
+    private _connections: { [url: string]: Relay }
 
-    constructor() {
-        const useRedis = Env.get("REDIS_CONNECTION")
-        if (useRedis) {
-            this._seenOn = new Keyv(useRedis, { namespace: "nostr-seen-on" });
-        }
-        else {
-            this._seenOn = {}
-        }
-        this._conn = {}
+    constructor(relayUrls: string[]) {
+        this.isInitialized = false
+        this._relaysUrls = relayUrls
+        this._connections = {}
     }
 
-    private async _getSeenOn(id: string): Promise<Set<string>> {
-        if (this._seenOn instanceof Keyv) {
-            return new Set(await this._seenOn.get(id) || [])
-        }
-        return this._seenOn[id] || new Set()
+    private _verifyInitializedOrDie() {
+        if (!this.isInitialized) throw new Error('NostrPool not initialized. Call init() first.')
     }
 
-    private async _setSeenOn(id: string, set: Set<string>) {
-        if (this._seenOn instanceof Keyv) {
-            // 5 minutes of cache
-            await this._seenOn.set(id, [...set], 5 * 1000 * 60)
+    public async init() {
+        for (const relayUrl of this._relaysUrls) {
+            await this._openRelayConnection(relayUrl, true)
         }
-        else {
-            this._seenOn[id] = set
+        this.isInitialized = true
+    }
+
+    private async _ensureRelayConnections(relays: string[]) {
+        for (const relayUrl of relays) {
+            await this._openRelayConnection(relayUrl)
         }
     }
 
-    async close(relays: string[]): Promise<void> {
-        await Promise.all(
-            relays.map(async url => {
-                let relay = this._conn[normalizeURL(url)]
-                if (relay) await relay.close()
+    private async _openRelayConnection(relayUrl: string, fromInit: boolean = false) {
+        const normalizedURL = normalizeURL(relayUrl)
+
+        if (this._connections[normalizedURL]?.status === 1) return
+
+        try {
+            this._connections[normalizedURL] = relayInit(normalizedURL)
+            await this._connections[normalizedURL].connect()
+
+            this._connections[normalizedURL].on('connect', () => {
+                console.log(`Connected to ${this._connections[normalizedURL].url}`)
             })
-        )
-    }
-
-    async ensureRelay(url: string): Promise<Relay> {
-        const nm = normalizeURL(url)
-        const existing = this._conn[nm]
-        if (existing) return existing
-
-        const relay = relayInit(nm)
-        this._conn[nm] = relay
-
-        await relay.connect()
-
-        return relay
-    }
-
-    sub(relays: string[], filters: Filter[], opts?: SubscriptionOptions): Sub {
-        let _knownIds: Set<string> | Keyv;
-        const knowIdsId = uuidv4()
-        if (Env.get("REDIS_CONNECTION")) {
-            _knownIds = new Keyv(Env.get("REDIS_CONNECTION"), { namespace: knowIdsId });
-        }
-        else {
-            _knownIds = new Set()
-        }
-
-        const addKnownIds = async (id: string) => {
-            if (_knownIds instanceof Keyv) {
-                let currentIds = await _knownIds.get(knowIdsId)
-                if (!currentIds) currentIds = []
-                return await _knownIds.set(knowIdsId, [...currentIds, id], 5 * 1000 * 60)
-            }
-            return _knownIds.add(id)
-        }
-        const hasKnownIds = async (id: string) => {
-            if (_knownIds instanceof Keyv) {
-                const sets = await _knownIds.get(knowIdsId)
-                if (sets) {
-                    return sets.includes(id)
-                }
-                return false
-            }
-            return _knownIds.has(id)
-        }
-
-        let modifiedOpts = opts || {}
-        modifiedOpts.alreadyHaveEvent = async (id, url) => {
-            const set = await this._getSeenOn(id)
-            set.add(url)
-            await this._setSeenOn(id, set)
-            return await hasKnownIds(id)
-        }
-
-        let subs: Sub[] = []
-        let eventListeners: Set<(event: Event) => void> = new Set()
-        let eoseListeners: Set<() => void> = new Set()
-        let eosesMissing = relays.length
-
-        let eoseSent = false
-        let eoseTimeout = setTimeout(() => {
-            eoseSent = true
-            for (let cb of eoseListeners.values()) cb()
-        }, 2400)
-
-        relays.forEach(async relay => {
-            let r = await this.ensureRelay(relay)
-            if (!r) return
-            let s = r.sub(filters, modifiedOpts)
-            s.on('event', async (event: Event) => {
-                await addKnownIds(event.id as string)
-                for (let cb of eventListeners.values()) cb(event)
+            this._connections[normalizedURL].on('error', () => {
+                throw new Error('Failed to connect to relay')
             })
-            s.on('eose', () => {
-                if (eoseSent) return
-
-                eosesMissing--
-                if (eosesMissing === 0) {
-                    clearTimeout(eoseTimeout)
-                    for (let cb of eoseListeners.values()) cb()
-                }
-            })
-            subs.push(s)
-        })
-
-        let greaterSub: Sub = {
-            sub(filters, opts) {
-                subs.forEach(sub => sub.sub(filters, opts))
-                return greaterSub
-            },
-            unsub() {
-                if (_knownIds instanceof Keyv) {
-                    _knownIds.clear().catch(console.error)
-                }
-                subs.forEach(sub => sub.unsub())
-            },
-            on(type, cb) {
-                switch (type) {
-                    case 'event':
-                        eventListeners.add(cb)
-                        break
-                    case 'eose':
-                        eoseListeners.add(cb)
-                        break
-                }
-            },
-            off(type, cb) {
-                if (type === 'event') {
-                    eventListeners.delete(cb)
-                } else if (type === 'eose') eoseListeners.delete(cb)
-            }
+        } catch (_) {
+            if (fromInit) console.error(`Error while initializing relay ${normalizedURL}.`)
         }
-
-        return greaterSub
     }
 
-    get(
-        relays: string[],
-        filter: Filter,
-        opts?: SubscriptionOptions
-    ): Promise<Event | null> {
-        return new Promise(resolve => {
-            let sub = this.sub(relays, [filter], opts)
-            let timeout = setTimeout(() => {
-                sub.unsub()
-                resolve(null)
-            }, 1500)
-            sub.on('event', (event: Event) => {
-                resolve(event)
-                clearTimeout(timeout)
+    public async sub(relays: string[], filters: Filter[], subscriptionId: string): Promise<EventEmitter> {
+        this._verifyInitializedOrDie()
+        await this._ensureRelayConnections(relays)
+
+        const normalizedURLs = relays.map(normalizeURL)
+        const _knownIds = new Set<string>()
+        const _subs = new Set<Sub>()
+        let eoseCount = 0
+        let eoseTimeout = false
+
+        const emitter = new EventEmitter()
+
+        emitter.on('unsubscribe', () => {
+            emitter.removeAllListeners()
+            _subs.forEach(sub => {
                 sub.unsub()
             })
+            _knownIds.clear()
+            _subs.clear()
         })
-    }
 
-    list(
-        relays: string[],
-        filters: Filter[],
-        opts?: SubscriptionOptions
-    ): Promise<Event[]> {
-        return new Promise(resolve => {
-            let events: Event[] = []
-            let sub = this.sub(relays, filters, opts)
+        for (const normalizedURL of normalizedURLs) {
+            let conn = this._connections[normalizedURL]
+            if (conn?.status !== 1) continue
 
+            const sub = conn.sub(filters, { id: subscriptionId })
             sub.on('event', (event: Event) => {
-                events.push(event)
+                if (_knownIds.has(event.id as string)) return
+                _knownIds.add(event.id as string)
+                emitter.emit('event', event)
             })
-
-            // we can rely on an eose being emitted here because pool.sub() will fake one
             sub.on('eose', () => {
-                sub.unsub()
-                resolve(events)
+                eoseCount++
+                if (eoseCount === 1) {
+                    const timer = setTimeout(() => {
+                        emitter.emit('eose')
+                        eoseTimeout = true
+                        clearTimeout(timer)
+                    }, 2500)
+                }
+                if (eoseCount === this._countConnectedRelays() && !eoseTimeout) {
+                    emitter.emit('eose')
+                }
             })
-        })
+            _subs.add(sub)
+        }
+
+        return emitter
     }
 
-    publish(relays: string[], event: Event): Pub[] {
-        return relays.map(relay => {
-            let r = this._conn[normalizeURL(relay)]
-            if (!r) return badPub(relay)
-            let s = r.publish(event)
-            return s
+    // There is no solution currently to unsubscribe from a publish. It creates a memory leak.
+    // TODO : Find a solution to unsubscribe from a publish in nostr-tools
+    public async publish(relays: string[], event: Event): Promise<EventEmitter> {
+        this._verifyInitializedOrDie()
+        await this._ensureRelayConnections(relays)
+
+        const emitter = new EventEmitter()
+
+        emitter.on('unsubscribe', () => {
+            emitter.removeAllListeners()
         })
+
+        let seenOn = 0
+        let seenOnTimeout = false
+
+        for (const relay of relays) {
+            let conn = this._connections[normalizeURL(relay)]
+            if (conn?.status !== 1) continue
+
+            let pub = conn.publish(event)
+            pub.on('ok', () => {
+                seenOn++
+                if (seenOn === 1) {
+                    const timer = setTimeout(() => {
+                        emitter?.emit('ok')
+                        seenOnTimeout = true
+                        emitter?.emit('unsubscribe')
+                        clearTimeout(timer)
+                    }, 2500)
+                }
+                if (seenOn === this._countConnectedRelays() && !seenOnTimeout) {
+                    emitter?.emit('ok')
+                    emitter?.emit('unsubscribe')
+                }
+            })
+            pub.on('failed', (reason: string) => {
+                emitter?.emit('failed', reason)
+                const timer = setTimeout(() => {
+                    emitter?.emit('unsubscribe')
+                    clearTimeout(timer)
+                }, 2500)
+            })
+        }
+
+        return emitter
     }
 
-    async seenOn(id: string): Promise<string[]> {
-        const seen = await this._getSeenOn(id)
-        return Array.from(seen?.values?.() || [])
+    private _countConnectedRelays(): number {
+        this._verifyInitializedOrDie()
+        return Object.values(this._connections).filter(conn => conn.status === 1).length
+    }
+
+    public getRelays(): string[] {
+        this._verifyInitializedOrDie()
+        return Object.keys(this._connections)
+    }
+
+    public getRelaysStatus(): { url: string, connected: boolean }[] {
+        this._verifyInitializedOrDie()
+        return Object.entries(this._connections).map(([url, conn]) => {
+            return {
+                url,
+                connected: conn.status === 1
+            }
+        })
     }
 }
 
-function badPub(relay: string): Pub {
-    return {
-        on(typ, cb) {
-            if (typ === 'failed') cb(`relay ${relay} not connected`)
-        },
-        off() { }
-    }
-}
+export default new NostrPool([...Env.get('RELAYS').split(',')])
