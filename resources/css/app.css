@@ -50,6 +50,7 @@ a:hover {
 
 .copy-text {
   width: 100%;
+  box-sizing: border-box;
   padding: 10px;
   border-radius: 5px;
   font-size: 1.2rem;
