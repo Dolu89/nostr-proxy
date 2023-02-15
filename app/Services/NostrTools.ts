@@ -1,3 +1,6 @@
+export const utf8Decoder = new TextDecoder('utf-8')
+export const utf8Encoder = new TextEncoder()
+
 export function normalizeURL(url: string): string {
     let p = new URL(url)
     p.pathname = p.pathname.replace(/\/+/g, '/')

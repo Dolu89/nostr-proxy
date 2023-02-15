@@ -1,8 +1,9 @@
 // // Customized Relay.ts from https://github.com/nbd-wtf/nostr-tools
 
-import { Event, Filter, matchFilters, validateEvent, verifySignature } from "nostr-tools"
+import { Filter, matchFilters, validateEvent } from "nostr-tools"
 import { WebSocket } from "ws"
 import { getHex64, getSubscriptionId } from "../Services/NostrTools"
+import { Event, verifySignature } from "./Event"
 
 /* global WebSocket */
 
@@ -129,7 +130,7 @@ export function relayInit(url: string): Relay {
                             if (
                                 validateEvent(event) &&
                                 openSubs[id] &&
-                                (openSubs[id].skipVerification || verifySignature(event)) &&
+                                (openSubs[id].skipVerification || await verifySignature(event)) &&
                                 matchFilters(openSubs[id].filters, event)
                             ) {
                                 openSubs[id]

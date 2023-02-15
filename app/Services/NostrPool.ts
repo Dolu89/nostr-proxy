@@ -1,10 +1,11 @@
 
-import { Event, Filter } from "nostr-tools"
+import { Filter } from "nostr-tools"
 import { normalizeURL } from "./NostrTools"
 import EventEmitter from "node:events"
 import Env from "@ioc:Adonis/Core/Env"
 import Redis from '@ioc:Adonis/Addons/Redis'
 import { relayInit, Relay, Sub } from "../Models/Relay"
+import { Event } from "../Models/Event"
 
 class NostrPool {
     public isInitialized: boolean
@@ -74,16 +75,15 @@ class NostrPool {
             _subs.clear()
         })
 
-        const alreadyHaveEvent = async (id: string, relayUrl: string) => {
-            return await Redis.sismember(relayUrl + subscriptionId, id) === 1
-        }
-
         for (const normalizedURL of normalizedURLs) {
             let conn = this._connections[normalizedURL]
             if (conn?.status !== 1) continue
 
             const sub = conn.sub(filters, {
-                id: subscriptionId, alreadyHaveEvent
+                id: subscriptionId,
+                alreadyHaveEvent: async (id: string, relayUrl: string) => {
+                    return await Redis.sismember(relayUrl + subscriptionId, id) === 1
+                }
             })
 
             sub.on('event', async (event: Event) => {
