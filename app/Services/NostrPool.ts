@@ -1,10 +1,11 @@
 
-import { Filter, Event, Relay, relayInit, Sub, Pub } from "nostr-tools"
+import { Filter, Event, Relay, relayInit, Sub } from "nostr-tools"
 import { normalizeURL } from "./NostrTools"
 import EventEmitter from "node:events"
+import Env from "@ioc:Adonis/Core/Env"
 
-export class NostrPool {
-    private isInitialized: boolean
+class NostrPool {
+    public isInitialized: boolean
     private _relaysUrls: string[]
     private _connections: { [url: string]: Relay }
 
@@ -19,29 +20,36 @@ export class NostrPool {
     }
 
     public async init() {
-        await this._openRelayConnections(this._relaysUrls).catch(console.error)
+        for (const relayUrl of this._relaysUrls) {
+            await this._openRelayConnection(relayUrl)
+        }
         this.isInitialized = true
     }
 
     private async _openRelayConnections(relays: string[]) {
         for (const relayUrl of relays) {
-            const normalizedURL = normalizeURL(relayUrl)
+            await this._openRelayConnection(relayUrl).catch(console.error)
+        }
+    }
 
-            if (this._connections[normalizedURL]) continue
+    private async _openRelayConnection(relayUrl: string) {
+        const normalizedURL = normalizeURL(relayUrl)
 
-            try {
-                this._connections[normalizedURL] = relayInit(normalizedURL)
-                await this._connections[normalizedURL].connect()
+        if (this._connections[normalizedURL]?.status === 1) return
 
-                this._connections[normalizedURL].on('connect', () => {
-                    console.log(`Connected to ${this._connections[normalizedURL].url}`)
-                })
-                this._connections[normalizedURL].on('error', () => {
-                    console.log(`Failed to connect to ${this._connections[normalizedURL].url}`)
-                })
-            } catch (error) {
-                console.error(`Error while initializing relay ${normalizedURL}`)
-            }
+        try {
+            this._connections[normalizedURL] = relayInit(normalizedURL)
+            await this._connections[normalizedURL].connect()
+
+            this._connections[normalizedURL].on('connect', () => {
+                console.log(`Connected to ${this._connections[normalizedURL].url}`)
+            })
+            this._connections[normalizedURL].on('error', () => {
+                console.log(`Failed to connect to ${this._connections[normalizedURL].url}.`)
+                throw new Error('Failed to connect to relay')
+            })
+        } catch (_) {
+            console.error(`Error while initializing relay ${normalizedURL}.`)
         }
     }
 
@@ -121,8 +129,8 @@ export class NostrPool {
                     const timer = setTimeout(() => {
                         emitter?.emit('ok')
                         seenOnTimeout = true
-                        clearTimeout(timer)
                         emitter?.emit('unsubscribe')
+                        clearTimeout(timer)
                     }, 2500)
                 }
                 if (seenOn === this._countConnectedRelays() && !seenOnTimeout) {
@@ -133,8 +141,8 @@ export class NostrPool {
             pub.on('failed', (reason: string) => {
                 emitter?.emit('failed', reason)
                 const timer = setTimeout(() => {
-                    clearTimeout(timer)
                     emitter?.emit('unsubscribe')
+                    clearTimeout(timer)
                 }, 2500)
             })
         }
@@ -143,8 +151,10 @@ export class NostrPool {
     }
 
 
-    public _countConnectedRelays(): number {
+    private _countConnectedRelays(): number {
         this._verifyInitializedOrDie()
         return Object.values(this._connections).filter(conn => conn.status === 1).length
     }
 }
+
+export default new NostrPool([...Env.get('RELAYS').split(',')])

@@ -1,8 +1,7 @@
-// import cron from "node-cron";
-// import { NostrPool } from "../app/Services/NostrPool";
-// // import NostrSocket from "../app/Services/WebSocketHandler";
+import cron from "node-cron";
+import NostrPool from "../app/Services/NostrPool";
 
-// cron.schedule('*/5 * * * *', async () => {
-//     if (!NostrPool) return
-//     await NostrSocket.init()
-// });
+cron.schedule('*/5 * * * *', async () => {
+    if (!NostrPool.isInitialized) return
+    await NostrPool.init()
+});

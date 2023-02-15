@@ -2,7 +2,7 @@ import "websocket-polyfill"
 import { v4 as uuidv4 } from "uuid";
 import Env from "@ioc:Adonis/Core/Env"
 import { WebSocket } from "ws";
-import { NostrPool } from "./NostrPool";
+import NostrPool from "./NostrPool";
 import { Filter, Event } from "nostr-tools";
 import WebSocketInstance from "./WebSocketInstance"
 import { EventEmitter } from "node:events";
@@ -16,14 +16,14 @@ class WebSocketServer {
     public booted: boolean
 
     private _relays: string[]
-    private _pool: NostrPool
+    private _pool: typeof NostrPool
     private _cache: Map<string, string>
     private _subs: Map<string, EventEmitter>
 
     constructor() {
         this.booted = false
         this._relays = [...Env.get('RELAYS').split(',')]
-        this._pool = new NostrPool(this._relays)
+        this._pool = NostrPool
 
         this._cache = new Map()
         this._subs = new Map()
