@@ -3,6 +3,7 @@ lockfileVersion: 5.4
 specifiers:
   '@adonisjs/assembler': ^5.9.5
   '@adonisjs/core': ^5.8.0
+  '@adonisjs/redis': ^7.3.2
   '@adonisjs/repl': ^3.1.0
   '@adonisjs/session': ^6.2.0
   '@adonisjs/shield': ^7.0.0
@@ -11,7 +12,6 @@ specifiers:
   '@babel/preset-env': ^7.16.0
   '@japa/preset-adonis': ^1.2.0
   '@japa/runner': ^2.3.0
-  '@keyv/redis': ^2.5.5
   '@symfony/webpack-encore': 4.1.1
   '@types/proxy-addr': ^2.0.0
   '@types/source-map-support': ^0.5.6
@@ -22,7 +22,6 @@ specifiers:
   eslint-config-prettier: ^8.6.0
   eslint-plugin-adonis: ^2.1.1
   eslint-plugin-prettier: ^4.2.1
-  keyv: ^4.5.2
   node-cron: ^3.0.2
   nostr-tools: 1.4.1
   pino-pretty: ^9.2.0
@@ -41,13 +40,12 @@ specifiers:
 
 dependencies:
   '@adonisjs/core': 5.9.0
+  '@adonisjs/redis': 7.3.2_@adonisjs+core@5.9.0
   '@adonisjs/repl': 3.1.11_@adonisjs+core@5.9.0
   '@adonisjs/session': 6.4.0_@adonisjs+core@5.9.0
   '@adonisjs/shield': 7.1.0_6zfde6vhifp77zjy4plh6p5tcu
   '@adonisjs/view': 6.2.0_@adonisjs+core@5.9.0
-  '@keyv/redis': 2.5.5
   '@types/uuid': 9.0.0
-  keyv: 4.5.2
   node-cron: 3.0.2
   nostr-tools: 1.4.1
   proxy-addr: 2.0.7
@@ -287,6 +285,19 @@ packages:
       '@adonisjs/logger': 4.1.5
       '@poppinss/utils': 4.0.4
       jest-worker: 27.5.1
+
+  /@adonisjs/redis/7.3.2_@adonisjs+core@5.9.0:
+    resolution: {integrity: sha512-rTzJbR+WuoRX+U/BgjloM+blyRSVvInA+iy3i0f/vxknQP2TQ2cg88vuHinEXoCdxPgAfdSy0AkVhsq3HCHgSw==}
+    peerDependencies:
+      '@adonisjs/core': ^5.1.0
+    dependencies:
+      '@adonisjs/core': 5.9.0
+      '@poppinss/utils': 5.0.0
+      '@types/ioredis': 4.28.10
+      ioredis: 5.3.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /@adonisjs/repl/3.1.11_@adonisjs+core@5.9.0:
     resolution: {integrity: sha512-t4xN+G+fa/XeZ+7qHnFbTk1bri/4RIGdFDk1cq2SeZI3nfu3E8Ma62uQVc8U3AAroN51plzXVcUoQ/Iw8q1P+Q==}
@@ -1819,15 +1830,6 @@ packages:
     resolution: {integrity: sha512-4JQNk+3mVzK3xh2rqd6RB4J46qUR19azEHBneZyTZM+c456qOrbbM/5xcR8huNCCcbVt7+UmizG6GuUvPvKUYg==}
     dev: true
 
-  /@keyv/redis/2.5.5:
-    resolution: {integrity: sha512-J7dNB6iU18AbkxiN2moPcWUShgOVZtf4ySpsZIXPnuwqrvkF4X0q7nH/+mYJEjJpZwUWg6HjVxXkJYE9C2jMDw==}
-    engines: {node: '>= 12'}
-    dependencies:
-      ioredis: 5.3.1
-    transitivePeerDependencies:
-      - supports-color
-    dev: false
-
   /@leichtgewicht/ip-codec/2.0.4:
     resolution: {integrity: sha512-Hcv+nVC0kZnQ3tD9GVu5xSMR4VVYOteQIr/hwFPVEvPdlXqgGEuRjiheChHgdM+JyqdgNcmzZOX/tnl0JOiI7A==}
     dev: true
@@ -2289,6 +2291,12 @@ packages:
     dependencies:
       '@types/node': 18.13.0
     dev: true
+
+  /@types/ioredis/4.28.10:
+    resolution: {integrity: sha512-69LyhUgrXdgcNDv7ogs1qXZomnfOEnSmrmMFqKgt1XMJxmoOSG/u3wYy13yACIfKuMJ8IhKgHafDO3sx19zVQQ==}
+    dependencies:
+      '@types/node': 18.13.0
+    dev: false
 
   /@types/istanbul-lib-coverage/2.0.4:
     resolution: {integrity: sha512-z/QT1XN4K4KYuslS23k62yDIDLwLFkzxOuMplDtObz0+y7VqJCaO2o+SPwHCvLFZh7xazvvoor2tA/hPz9ee7g==}
@@ -5696,10 +5704,6 @@ packages:
     hasBin: true
     dev: true
 
-  /json-buffer/3.0.1:
-    resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
-    dev: false
-
   /json-parse-even-better-errors/2.3.1:
     resolution: {integrity: sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==}
     dev: true
@@ -5753,12 +5757,6 @@ packages:
     resolution: {integrity: sha512-pBxcB3LFc8QVgdggvZWyeys+hnrNWg4OcZIU/1X59k5jQdLBlCsYGRQaz234SqoRLTCgMH00fY0xRJH+F9METQ==}
     engines: {node: '>=8'}
     dev: true
-
-  /keyv/4.5.2:
-    resolution: {integrity: sha512-5MHbFaKn8cNSmVW7BYnijeAVlE4cYA/SVkifVgrh7yotnfhKmjuXpDKjrABLnT0SfHWV21P8ow07OGfRrNDg8g==}
-    dependencies:
-      json-buffer: 3.0.1
-    dev: false
 
   /kind-of/3.2.2:
     resolution: {integrity: sha512-NOW9QQXMoZGg/oqnVNoNTTIFEIid1627WCffUBJEdMxYApq7mNE7CpzucIPc+ZQg25Phej7IJSmX3hO+oblOtQ==}

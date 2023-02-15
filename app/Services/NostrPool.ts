@@ -3,6 +3,7 @@ import { Filter, Event, Relay, relayInit, Sub } from "nostr-tools"
 import { normalizeURL } from "./NostrTools"
 import EventEmitter from "node:events"
 import Env from "@ioc:Adonis/Core/Env"
+import Redis from '@ioc:Adonis/Addons/Redis'
 
 class NostrPool {
     public isInitialized: boolean
@@ -36,7 +37,7 @@ class NostrPool {
         const normalizedURL = normalizeURL(relayUrl)
 
         if (this._connections[normalizedURL]?.status === 1) return
-        console.log("test", normalizedURL)
+
         try {
             this._connections[normalizedURL] = relayInit(normalizedURL)
             await this._connections[normalizedURL].connect()
@@ -57,19 +58,18 @@ class NostrPool {
         // await this._ensureRelayConnections(relays)
 
         const normalizedURLs = relays.map(normalizeURL)
-        const _knownIds = new Set<string>()
         const _subs = new Set<Sub>()
         let eoseCount = 0
         let eoseTimeout = false
 
         const emitter = new EventEmitter()
 
-        emitter.on('unsubscribe', () => {
+        emitter.on('unsubscribe', async () => {
             emitter.removeAllListeners()
             _subs.forEach(sub => {
                 sub.unsub()
             })
-            _knownIds.clear()
+            await Redis.del(subscriptionId)
             _subs.clear()
         })
 
@@ -78,11 +78,14 @@ class NostrPool {
             if (conn?.status !== 1) continue
 
             const sub = conn.sub(filters, { id: subscriptionId })
-            sub.on('event', (event: Event) => {
-                if (_knownIds.has(event.id as string)) return
-                _knownIds.add(event.id as string)
+
+            sub.on('event', async (event: Event) => {
+                if (await Redis.sismember(subscriptionId, event.id as string) === 1) return
+
+                await Redis.sadd(subscriptionId, event.id as string)
                 emitter.emit('event', event)
             })
+
             sub.on('eose', () => {
                 eoseCount++
                 if (eoseCount === 1) {
