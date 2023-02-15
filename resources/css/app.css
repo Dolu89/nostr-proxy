@@ -35,9 +35,15 @@ a:hover {
 .header {
   display: flex;
   flex-direction: column;
-  align-items: end;
+  align-items: start;
   justify-content: center;
   margin-bottom: 50px;
+}
+
+@media (min-width: 421px) {
+  .header {
+    align-items: end;
+  }
 }
 
 .header > .title {
