@@ -1,4 +1,4 @@
-import Ws from "../app/Services/WsServer"
+import WebSocketInstance from "../app/Services/WebSocketInstance"
 
 // Boot Websocket server
-Ws.boot()
+WebSocketInstance.boot()
