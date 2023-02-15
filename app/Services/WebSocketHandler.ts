@@ -33,7 +33,6 @@ class WebSocketServer {
         if (this.booted) return
 
         await this._pool.init()
-        // await this.initRelays()
         await this.initWsHandler()
         this.booted = true
     }
@@ -87,12 +86,13 @@ class WebSocketServer {
                     }
                     else if (parsed[0] === 'EVENT') {
                         const event = parsed[1] as unknown as Event
-                        // let pubs = this._pool.publish(this._relays, event)
-                        // pubs.forEach(pub =>
-                        //     pub.on('ok', () => {
-                        //         socket.send(JSON.stringify(["OK", event.id, true, ""]))
-                        //     })
-                        // )
+                        const pub = await this._pool.publish(this._relays, event)
+                        pub.on('ok', () => {
+                            socket.send(JSON.stringify(["OK", event.id, true, ""]))
+                        })
+                        pub.on('failed', (reason: string) => {
+                            socket.send(JSON.stringify(["NOTICE", reason]))
+                        })
                     }
                     else {
                         throw new Error(`Invalid event ${data.toString()}`)
