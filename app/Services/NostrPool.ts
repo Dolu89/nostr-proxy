@@ -21,18 +21,18 @@ class NostrPool {
 
     public async init() {
         for (const relayUrl of this._relaysUrls) {
-            await this._openRelayConnection(relayUrl)
+            await this._openRelayConnection(relayUrl, true)
         }
         this.isInitialized = true
     }
 
-    private async _openRelayConnections(relays: string[]) {
+    private async _ensureRelayConnections(relays: string[]) {
         for (const relayUrl of relays) {
-            await this._openRelayConnection(relayUrl).catch(console.error)
+            await this._openRelayConnection(relayUrl)
         }
     }
 
-    private async _openRelayConnection(relayUrl: string) {
+    private async _openRelayConnection(relayUrl: string, fromInit: boolean = false) {
         const normalizedURL = normalizeURL(relayUrl)
 
         if (this._connections[normalizedURL]?.status === 1) return
@@ -45,17 +45,16 @@ class NostrPool {
                 console.log(`Connected to ${this._connections[normalizedURL].url}`)
             })
             this._connections[normalizedURL].on('error', () => {
-                console.log(`Failed to connect to ${this._connections[normalizedURL].url}.`)
                 throw new Error('Failed to connect to relay')
             })
         } catch (_) {
-            console.error(`Error while initializing relay ${normalizedURL}.`)
+            if (fromInit) console.error(`Error while initializing relay ${normalizedURL}.`)
         }
     }
 
     public async sub(relays: string[], filters: Filter[], subscriptionId: string): Promise<EventEmitter> {
         this._verifyInitializedOrDie()
-        await this._openRelayConnections(relays)
+        await this._ensureRelayConnections(relays)
 
         const normalizedURLs = relays.map(normalizeURL)
         const _knownIds = new Set<string>()
@@ -107,7 +106,7 @@ class NostrPool {
     // TODO : Find a solution to unsubscribe from a publish in nostr-tools
     public async publish(relays: string[], event: Event): Promise<EventEmitter> {
         this._verifyInitializedOrDie()
-        await this._openRelayConnections(relays)
+        await this._ensureRelayConnections(relays)
 
         const emitter = new EventEmitter()
 
