@@ -1,11 +1,9 @@
 
-import { Filter } from "nostr-tools"
-import { normalizeURL } from "./NostrTools"
+import { Filter, Relay, Sub, Event, relayInit } from "@dolu/nostr-tools"
 import EventEmitter from "node:events"
 import Env from "@ioc:Adonis/Core/Env"
 import Redis from '@ioc:Adonis/Addons/Redis'
-import { relayInit, Relay, Sub } from "../Models/Relay"
-import { Event } from "../Models/Event"
+import { normalizeURL } from "./NostrTools"
 
 class NostrPool {
     public isInitialized: boolean
@@ -71,7 +69,9 @@ class NostrPool {
             _subs.forEach(sub => {
                 sub.unsub()
             })
-            await Redis.del(subscriptionId)
+            for (const relayUrl of normalizedURLs) {
+                await Redis.del(`seen-on:${relayUrl}:${subscriptionId}`)
+            }
             _subs.clear()
         })
 
@@ -82,15 +82,15 @@ class NostrPool {
             const sub = conn.sub(filters, {
                 id: subscriptionId,
                 alreadyHaveEvent: async (id: string, relayUrl: string) => {
-                    return await Redis.sismember(relayUrl + subscriptionId, id) === 1
+                    return await Redis.sismember(`seen-on:${relayUrl}:${subscriptionId}`, id) === 1
                 },
                 skipVerification: true
             })
 
             sub.on('event', async (event: Event) => {
-                if (await Redis.sismember(normalizedURL + subscriptionId, event.id as string) === 1) return
+                if (await Redis.sismember(`seen-on:${normalizedURL}:${subscriptionId}`, event.id as string) === 1) return
 
-                await Redis.sadd(normalizedURL + subscriptionId, event.id as string)
+                await Redis.sadd(`seen-on:${normalizedURL}:${subscriptionId}`, event.id as string)
                 emitter.emit('event', event)
             })
 
@@ -137,8 +137,8 @@ class NostrPool {
                 seenOn++
                 if (seenOn === 1) {
                     const timer = setTimeout(() => {
-                        emitter?.emit('ok')
                         seenOnTimeout = true
+                        emitter?.emit('ok')
                         emitter?.emit('unsubscribe')
                         clearTimeout(timer)
                     }, 2500)
@@ -149,6 +149,7 @@ class NostrPool {
                 }
             })
             pub.on('failed', (reason: string) => {
+                seenOn++
                 emitter?.emit('failed', reason)
                 const timer = setTimeout(() => {
                     emitter?.emit('unsubscribe')

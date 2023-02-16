@@ -10,6 +10,7 @@ specifiers:
   '@adonisjs/view': ^6.1.0
   '@babel/core': ^7.17.0
   '@babel/preset-env': ^7.16.0
+  '@dolu/nostr-tools': ^1.5.0
   '@japa/preset-adonis': ^1.2.0
   '@japa/runner': ^2.3.0
   '@noble/hashes': ^1.2.0
@@ -25,7 +26,6 @@ specifiers:
   eslint-plugin-adonis: ^2.1.1
   eslint-plugin-prettier: ^4.2.1
   node-cron: ^3.0.2
-  nostr-tools: 1.4.1
   pino-pretty: ^9.2.0
   prettier: ^2.8.4
   proxy-addr: ^2.0.7
@@ -48,11 +48,11 @@ dependencies:
   '@adonisjs/session': 6.4.0_@adonisjs+core@5.9.0
   '@adonisjs/shield': 7.1.0_6zfde6vhifp77zjy4plh6p5tcu
   '@adonisjs/view': 6.2.0_@adonisjs+core@5.9.0
+  '@dolu/nostr-tools': 1.5.0
   '@noble/hashes': 1.2.0
   '@noble/secp256k1': 1.7.1
   '@types/uuid': 9.0.0
   node-cron: 3.0.2
-  nostr-tools: 1.4.1
   proxy-addr: 2.0.7
   reflect-metadata: 0.1.13
   sha256: link:@noble/hashes/sha256
@@ -1605,6 +1605,17 @@ packages:
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
     dev: true
+
+  /@dolu/nostr-tools/1.5.0:
+    resolution: {integrity: sha512-oV0YDRd9P2EMKHV/JpYZOx0qm1YwADbsDiz+3nCUEuqg44F265xZF2ZW6zWBo0w7HB0BC7cfpfYBToDWJ28/nQ==}
+    dependencies:
+      '@noble/hashes': 1.0.0
+      '@noble/secp256k1': 1.7.1
+      '@scure/base': 1.1.1
+      '@scure/bip32': 1.1.5
+      '@scure/bip39': 1.1.1
+      prettier: 2.8.4
+    dev: false
 
   /@eslint/eslintrc/1.4.1:
     resolution: {integrity: sha512-XXrH9Uarn0stsyldqDYq8r++mROmWRI1xKMXa640Bb//SY1+ECYX6VzT6Lcx5frD0V30XieqJ0oX9I2Xj5aoMA==}
@@ -6288,17 +6299,6 @@ packages:
   /normalize-url/6.1.0:
     resolution: {integrity: sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==}
     engines: {node: '>=10'}
-
-  /nostr-tools/1.4.1:
-    resolution: {integrity: sha512-pFAbVNtRMfW5ducUmk0f20IZv4a6pXYchBQKuA6D3x6sg83KoWipuiAie/gfOgrkoCsBLV14DmpWsVmo3N7WXQ==}
-    dependencies:
-      '@noble/hashes': 1.0.0
-      '@noble/secp256k1': 1.7.1
-      '@scure/base': 1.1.1
-      '@scure/bip32': 1.1.5
-      '@scure/bip39': 1.1.1
-      prettier: 2.8.4
-    dev: false
 
   /npm-run-path/4.0.1:
     resolution: {integrity: sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw==}

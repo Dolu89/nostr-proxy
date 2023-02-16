@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import Env from "@ioc:Adonis/Core/Env"
 import { WebSocket } from "ws";
 import NostrPool from "./NostrPool";
-import { Filter, Event } from "nostr-tools";
+import { Filter, Event } from "@dolu/nostr-tools";
 import WebSocketInstance from "./WebSocketInstance"
 import { EventEmitter } from "node:events";
 

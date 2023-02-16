@@ -2,10 +2,8 @@ import "websocket-polyfill"
 import { v4 as uuidv4 } from "uuid";
 import Env from "@ioc:Adonis/Core/Env"
 import { WebSocket } from "ws";
-import { Filter, Event } from "nostr-tools";
 import WebSocketInstance from "./WebSocketInstance"
-import { SimplePool } from "./Simplepool";
-import { Sub } from "../Models/Relay";
+import { Filter, SimplePool, Sub, Event } from "@dolu/nostr-tools";
 
 interface CustomWebsocket extends WebSocket {
     connectionId: string
@@ -75,7 +73,10 @@ class WebSocketServer {
                         this._subs.set(randomSubscriptionId, this._pool.sub(
                             this._relays,
                             [filters],
-                            { id: randomSubscriptionId }
+                            {
+                                id: randomSubscriptionId,
+                                skipVerification: true
+                            }
                         ))
 
                         this._subs.get(randomSubscriptionId)?.on('event', (data: Event) => {
