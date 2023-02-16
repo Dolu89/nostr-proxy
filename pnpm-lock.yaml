@@ -26,6 +26,7 @@ specifiers:
   eslint-plugin-adonis: ^2.1.1
   eslint-plugin-prettier: ^4.2.1
   node-cron: ^3.0.2
+  nostr-tools: ^1.4.1
   pino-pretty: ^9.2.0
   prettier: ^2.8.4
   proxy-addr: ^2.0.7
@@ -53,6 +54,7 @@ dependencies:
   '@noble/secp256k1': 1.7.1
   '@types/uuid': 9.0.0
   node-cron: 3.0.2
+  nostr-tools: 1.4.1
   proxy-addr: 2.0.7
   reflect-metadata: 0.1.13
   sha256: link:@noble/hashes/sha256
@@ -6299,6 +6301,17 @@ packages:
   /normalize-url/6.1.0:
     resolution: {integrity: sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==}
     engines: {node: '>=10'}
+
+  /nostr-tools/1.4.1:
+    resolution: {integrity: sha512-pFAbVNtRMfW5ducUmk0f20IZv4a6pXYchBQKuA6D3x6sg83KoWipuiAie/gfOgrkoCsBLV14DmpWsVmo3N7WXQ==}
+    dependencies:
+      '@noble/hashes': 1.0.0
+      '@noble/secp256k1': 1.7.1
+      '@scure/base': 1.1.1
+      '@scure/bip32': 1.1.5
+      '@scure/bip39': 1.1.1
+      prettier: 2.8.4
+    dev: false
 
   /npm-run-path/4.0.1:
     resolution: {integrity: sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw==}

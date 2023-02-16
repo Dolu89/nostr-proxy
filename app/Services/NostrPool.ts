@@ -182,4 +182,4 @@ class NostrPool {
     }
 }
 
-export default new NostrPool([...Env.get('RELAYS').split(',')])
+// export default new NostrPool([...Env.get('RELAYS').split(',')])

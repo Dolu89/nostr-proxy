@@ -71,6 +71,7 @@
     "@noble/secp256k1": "^1.7.1",
     "@types/uuid": "^9.0.0",
     "node-cron": "^3.0.2",
+    "nostr-tools": "^1.4.1",
     "proxy-addr": "^2.0.7",
     "reflect-metadata": "^0.1.13",
     "sha256": "link:@noble/hashes/sha256",
