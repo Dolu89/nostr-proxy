@@ -41,6 +41,7 @@ export class SimplePool {
       await Redis.sadd("seen-on:" + id, url)
       return _knownIds.has(id)
     }
+    modifiedOpts.skipVerification = true
 
     let subs: Sub[] = []
     let eventListeners: Set<(event: Event) => void> = new Set()

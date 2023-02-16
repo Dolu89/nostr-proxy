@@ -127,13 +127,11 @@ export function relayInit(url: string): Relay {
                         case 'EVENT':
                             let id = data[1]
                             let event = data[2]
-                            const isVerified = await isEventVerified(event.id)
-                            if (isVerified
-                                 ||
-                                (validateEvent(event) &&
-                                    openSubs[id] &&
-                                    (openSubs[id].skipVerification || await verifySignature(event)) &&
-                                    matchFilters(openSubs[id].filters, event))
+                            // const isVerified = await isEventVerified(event.id)
+                            if (validateEvent(event) &&
+                                openSubs[id] &&
+                                (openSubs[id].skipVerification || await verifySignature(event)) &&
+                                matchFilters(openSubs[id].filters, event)
                             ) {
                                 openSubs[id]
                                     ; (subListeners[id]?.event || []).forEach(cb => cb(event))
