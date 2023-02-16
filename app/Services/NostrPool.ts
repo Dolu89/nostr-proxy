@@ -1,3 +1,4 @@
+// Fail attempt to create a pool of relays to avoid memory leak.
 
 import { Filter, Relay, Sub, Event, relayInit } from "@dolu/nostr-tools"
 import EventEmitter from "node:events"

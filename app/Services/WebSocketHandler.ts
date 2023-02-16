@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import Env from "@ioc:Adonis/Core/Env"
 import { WebSocket } from "ws";
 import WebSocketInstance from "./WebSocketInstance"
-import { Filter, Sub, Event } from "nostr-tools";
+import { Filter, Sub, Event } from "@dolu/nostr-tools";
 import { SimplePool } from "./Simplepool";
 
 interface CustomWebsocket extends WebSocket {
