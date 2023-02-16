@@ -3,7 +3,7 @@
 import { Filter, matchFilters, validateEvent } from "nostr-tools"
 import { WebSocket } from "ws"
 import { getHex64, getSubscriptionId } from "../Services/NostrTools"
-import { Event, verifySignature } from "./Event"
+import { Event, isEventVerified, verifySignature } from "./Event"
 
 /* global WebSocket */
 
@@ -127,11 +127,13 @@ export function relayInit(url: string): Relay {
                         case 'EVENT':
                             let id = data[1]
                             let event = data[2]
-                            if (
-                                validateEvent(event) &&
-                                openSubs[id] &&
-                                (openSubs[id].skipVerification || await verifySignature(event)) &&
-                                matchFilters(openSubs[id].filters, event)
+                            const isVerified = await isEventVerified(event.id)
+                            if (isVerified
+                                 ||
+                                (validateEvent(event) &&
+                                    openSubs[id] &&
+                                    (openSubs[id].skipVerification || await verifySignature(event)) &&
+                                    matchFilters(openSubs[id].filters, event))
                             ) {
                                 openSubs[id]
                                     ; (subListeners[id]?.event || []).forEach(cb => cb(event))

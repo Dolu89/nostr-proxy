@@ -1,4 +1,5 @@
-import { Filter, Event } from "nostr-tools"
+import { Filter } from "nostr-tools"
+import { Event } from "../Models/Event"
 import { Pub, Relay, relayInit, Sub, SubscriptionOptions } from "../Models/Relay"
 import { normalizeURL } from "./NostrTools"
 import Redis from '@ioc:Adonis/Addons/Redis'
@@ -37,7 +38,7 @@ export class SimplePool {
     let _knownIds: Set<string> = new Set()
     let modifiedOpts = opts || {}
     modifiedOpts.alreadyHaveEvent = async (id, url) => {
-      await Redis.sadd(id, url)
+      await Redis.sadd("seen-on:" + id, url)
       return _knownIds.has(id)
     }
 
@@ -150,7 +151,7 @@ export class SimplePool {
   }
 
   async seenOn(id: string): Promise<string[]> {
-    return await Redis.smembers(id)
+    return await Redis.smembers("seen-on:" + id)
   }
 }
 

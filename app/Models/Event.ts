@@ -1,6 +1,7 @@
 import * as secp256k1 from '@noble/secp256k1'
 import { sha256 } from '@noble/hashes/sha256'
 import { utf8Encoder } from '../Services/NostrTools'
+import Redis from '@ioc:Adonis/Addons/Redis'
 
 
 /* eslint-disable no-unused-vars */
@@ -77,11 +78,22 @@ export function validateEvent(event: Event): boolean {
 }
 
 export async function verifySignature(event: Event & { sig: string }): Promise<boolean> {
-    return await secp256k1.schnorr.verify(
+    console.log("verifying signature")
+    const verified = await secp256k1.schnorr.verify(
         event.sig,
         getEventHash(event),
         event.pubkey
     )
+    await Redis.set(`event-verified:${event.id}`, "1")
+    return verified
+}
+
+export async function isEventVerified(eventId: string): Promise<boolean> {
+    const returnVal = await Redis.get(`event-verified:${eventId}`)
+    if (returnVal === "1") {
+        return true
+    }
+    return false
 }
 
 export async function signEvent(event: Event, key: string): Promise<string> {
