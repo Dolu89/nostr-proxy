@@ -79,6 +79,8 @@ export class SimplePool {
       },
       async unsub() {
         subs.forEach(sub => sub.unsub())
+        eventListeners.clear()
+        eoseListeners.clear()
         for (const relay of relays) {
           await Redis.del(`seen-on:${normalizeURL(relay)}:${modifiedOpts.id}`)
         }
