@@ -58,6 +58,7 @@ export class SimplePool {
       let s = r.sub(filters, modifiedOpts)
       s.on('event', async (event: Event) => {
         await Redis.sadd(`seen-on:${r.url}:${modifiedOpts.id}`, event.id as string)
+        await Redis.pexpire(`seen-on:${r.url}:${modifiedOpts.id}`, 10 * 1000 * 60)
         for (let cb of eventListeners.values()) cb(event)
       })
       s.on('eose', () => {
