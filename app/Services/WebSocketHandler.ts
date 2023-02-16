@@ -43,10 +43,9 @@ class WebSocketServer {
                 const relay = await this._pool.ensureRelay(url)
                 await relay.connect()
             } catch (_) {
-                // console.error(`Error while initializing relay ${url}`)
+                console.error(`Error while initializing relay ${url}`)
             }
         }
-        console.log(`Initialized ${this._relays.length} relays`)
     }
 
     private async initWsHandler() {
