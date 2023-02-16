@@ -3,7 +3,7 @@
 import { Filter, matchFilters, validateEvent } from "nostr-tools"
 import { WebSocket } from "ws"
 import { getHex64, getSubscriptionId } from "../Services/NostrTools"
-import { Event, isEventVerified, verifySignature } from "./Event"
+import { Event, verifySignature } from "./Event"
 
 /* global WebSocket */
 

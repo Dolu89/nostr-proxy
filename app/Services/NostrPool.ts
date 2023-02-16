@@ -83,7 +83,8 @@ class NostrPool {
                 id: subscriptionId,
                 alreadyHaveEvent: async (id: string, relayUrl: string) => {
                     return await Redis.sismember(relayUrl + subscriptionId, id) === 1
-                }
+                },
+                skipVerification: true
             })
 
             sub.on('event', async (event: Event) => {
@@ -180,4 +181,4 @@ class NostrPool {
     }
 }
 
-// export default new NostrPool([...Env.get('RELAYS').split(',')])
+export default new NostrPool([...Env.get('RELAYS').split(',')])
