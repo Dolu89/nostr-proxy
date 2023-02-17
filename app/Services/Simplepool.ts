@@ -1,5 +1,5 @@
 // import { Pub, Relay, relayInit, SubscriptionOptions, Filter, Event, Sub } from "nostr-tools"
-import Redis from "@ioc:Adonis/Addons/Redis"
+// import Redis from "@ioc:Adonis/Addons/Redis"
 import { Filter, Relay, relayInit, Sub, SubscriptionOptions, Event, Pub } from "@dolu/nostr-tools"
 // import { Pub, Relay, relayInit, Sub, SubscriptionOptions } from "../Models/Relay"
 // import { Event } from "../Models/Event"
@@ -35,9 +35,11 @@ export class SimplePool {
   }
 
   sub(relays: string[], filters: Filter[], opts?: SubscriptionOptions): Sub {
+    let knownIds = new Set<string>()
+
     let modifiedOpts = opts || {}
     modifiedOpts.alreadyHaveEvent = async (id, _) => {
-      return await Redis.sismember(`known-ids:${modifiedOpts.id}`, id) === 1
+      return knownIds.has(id)
     }
     modifiedOpts.skipVerification = true
 
@@ -57,9 +59,8 @@ export class SimplePool {
       if (!r) return
       let s = r.sub(filters, modifiedOpts)
       s.on('event', async (event: Event) => {
-        if (await Redis.sismember(`known-ids:${modifiedOpts.id}`, event.id) !== 1) {
-          await Redis.sadd(`known-ids:${modifiedOpts.id}`, event.id as string)
-          await Redis.pexpire(`known-ids:${modifiedOpts.id}`, 60 * 1000)
+        if (!knownIds.has(event.id as string)) {
+          knownIds.add(event.id as string)
           for (let cb of eventListeners.values()) cb(event)
         }
       })
@@ -84,7 +85,7 @@ export class SimplePool {
         subs.forEach(sub => sub.unsub())
         eventListeners.clear()
         eoseListeners.clear()
-        await Redis.del(`known-ids:${modifiedOpts.id}`)
+        knownIds.clear()
       },
       on(type, cb) {
         switch (type) {
