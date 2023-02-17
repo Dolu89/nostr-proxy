@@ -36,8 +36,8 @@ export class SimplePool {
 
   sub(relays: string[], filters: Filter[], opts?: SubscriptionOptions): Sub {
     let modifiedOpts = opts || {}
-    modifiedOpts.alreadyHaveEvent = async (id, url) => {
-      return await Redis.sismember(`seen-on:${url}:${modifiedOpts.id}`, id) === 1
+    modifiedOpts.alreadyHaveEvent = async (id, _) => {
+      return await Redis.sismember(`known-ids:${modifiedOpts.id}`, id) === 1
     }
     modifiedOpts.skipVerification = true
 
@@ -57,9 +57,11 @@ export class SimplePool {
       if (!r) return
       let s = r.sub(filters, modifiedOpts)
       s.on('event', async (event: Event) => {
-        await Redis.sadd(`seen-on:${r.url}:${modifiedOpts.id}`, event.id as string)
-        await Redis.pexpire(`seen-on:${r.url}:${modifiedOpts.id}`, 10 * 1000 * 60)
-        for (let cb of eventListeners.values()) cb(event)
+        if (await Redis.sismember(`known-ids:${modifiedOpts.id}`, event.id) !== 1) {
+          await Redis.sadd(`known-ids:${modifiedOpts.id}`, event.id as string)
+          await Redis.pexpire(`known-ids:${modifiedOpts.id}`, 60 * 1000)
+          for (let cb of eventListeners.values()) cb(event)
+        }
       })
       s.on('eose', () => {
         if (eoseSent) return
@@ -82,9 +84,7 @@ export class SimplePool {
         subs.forEach(sub => sub.unsub())
         eventListeners.clear()
         eoseListeners.clear()
-        for (const relay of relays) {
-          await Redis.del(`seen-on:${normalizeURL(relay)}:${modifiedOpts.id}`)
-        }
+        await Redis.del(`known-ids:${modifiedOpts.id}`)
       },
       on(type, cb) {
         switch (type) {
