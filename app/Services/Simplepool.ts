@@ -34,13 +34,15 @@ export class SimplePool {
     return relay
   }
 
+  private _alreadyHaveEvent(id: string, _: string, subscriptionId: string, knownIds: Set<string>): boolean {
+    return knownIds.has(subscriptionId + id)
+  }
+
   sub(relays: string[], filters: Filter[], opts?: SubscriptionOptions): Sub {
     let knownIds = new Set<string>()
 
     let modifiedOpts = opts || {}
-    modifiedOpts.alreadyHaveEvent = async (id, _) => {
-      return knownIds.has(id)
-    }
+    modifiedOpts.alreadyHaveEvent = async (id, _) => this._alreadyHaveEvent(id, _, modifiedOpts.id as string, knownIds)
     modifiedOpts.skipVerification = true
 
     let subs: Sub[] = []
@@ -65,6 +67,7 @@ export class SimplePool {
         }
       })
       s.on('eose', () => {
+        knownIds.clear()
         if (eoseSent) return
 
         eosesMissing--
