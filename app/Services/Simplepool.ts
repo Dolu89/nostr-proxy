@@ -1,5 +1,4 @@
 // import { Pub, Relay, relayInit, SubscriptionOptions, Filter, Event, Sub } from "nostr-tools"
-// import Redis from "@ioc:Adonis/Addons/Redis"
 import { Filter, Relay, relayInit, Sub, SubscriptionOptions, Event, Pub } from "@dolu/nostr-tools"
 // import { Pub, Relay, relayInit, Sub, SubscriptionOptions } from "../Models/Relay"
 // import { Event } from "../Models/Event"

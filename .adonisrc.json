@@ -21,8 +21,7 @@
     "@adonisjs/core",
     "@adonisjs/session",
     "@adonisjs/view",
-    "@adonisjs/shield",
-    "@adonisjs/redis"
+    "@adonisjs/shield"
   ],
   "metaFiles": [
     {
