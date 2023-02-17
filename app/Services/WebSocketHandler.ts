@@ -100,10 +100,20 @@ class WebSocketServer {
                     else if (parsed[0] === 'EVENT') {
                         const event = parsed[1] as unknown as Event
                         let pubs = this._pool.publish(this._relays, event)
-                        pubs.forEach(pub =>
+                        pubs.forEach(pub => {
                             pub.on('ok', () => {
                                 socket.send(JSON.stringify(["OK", event.id, true, ""]))
+                                pub.unpub()
                             })
+                            pub.on('failed', () => {
+                                // Send NOTICE?
+                                pub.unpub()
+                            })
+                            const unpubTimer = setTimeout(() => {
+                                pub?.unpub()
+                                clearTimeout(unpubTimer)
+                            }, 10000)
+                        }
                         )
                     }
                     else {

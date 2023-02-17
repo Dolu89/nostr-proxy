@@ -162,6 +162,7 @@ function badPub(relay: string): Pub {
     on(typ, cb) {
       if (typ === 'failed') cb(`relay ${relay} not connected`)
     },
-    off() { }
+    off() { },
+    unpub() { },
   }
 }
