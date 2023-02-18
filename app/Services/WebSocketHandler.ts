@@ -2,8 +2,10 @@ import { v4 as uuidv4 } from "uuid";
 import Env from "@ioc:Adonis/Core/Env"
 import { WebSocket } from "ws";
 import WebSocketInstance from "./WebSocketInstance"
-import { Filter, Sub, Event } from "@dolu/nostr-tools";
-import { SimplePool } from "./Simplepool";
+import { RelayPool, Event } from "nostr-relaypool";
+import { Sub } from "nostr-relaypool/relay";
+import { Filter } from "@dolu/nostr-tools";
+// import { SimplePool } from "./Simplepool";
 
 interface CustomWebsocket extends WebSocket {
     connectionId: string
@@ -14,14 +16,14 @@ class WebSocketServer {
     public booted: boolean
 
     private _relays: string[]
-    private _pool: SimplePool
+    private _pool: RelayPool
     private _cache: Map<string, string>
-    private _subs: Map<string, Sub>
+    private _subs: Map<string, () => void>
 
     constructor() {
         this.booted = false
         this._relays = [...Env.get('RELAYS').split(',')]
-        this._pool = new SimplePool()
+        this._pool = new RelayPool(this._relays, { keepSignature: true, dontLogSubscriptions: true })
 
         this._cache = new Map()
         this._subs = new Map()
@@ -30,21 +32,14 @@ class WebSocketServer {
     public async boot() {
         if (this.booted) return
 
-        await this.initRelays()
+        this._pool.onerror((err, relayUrl) => {
+            console.log("RelayPool error", err, " from relay ", relayUrl);
+        });
+        this._pool.onnotice((relayUrl, notice) => {
+            console.log("RelayPool notice", notice, " from relay ", relayUrl);
+        });
         await this.initWsHandler()
         this.booted = true
-    }
-
-    public async initRelays() {
-        // Initializing relays
-        for (const url of this._relays) {
-            try {
-                const relay = await this._pool.ensureRelay(url)
-                await relay.connect()
-            } catch (_) {
-                console.error(`Error while initializing relay ${url}`)
-            }
-        }
     }
 
     private async initWsHandler() {
@@ -64,34 +59,47 @@ class WebSocketServer {
                         // Close old subscription if subscriptionId already exists
                         const oldRandomSubscriptionId = this._cache.get(`${socket.connectionId}:${subscriptionId}`)
                         if (oldRandomSubscriptionId) {
-                            this._subs.get(oldRandomSubscriptionId)?.unsub()
+                            const unsub = this._subs.get(oldRandomSubscriptionId)
+                            if (unsub) unsub()
                             this._subs.delete(oldRandomSubscriptionId)
                         }
 
                         this._cache.set(`${socket.connectionId}:${subscriptionId}`, randomSubscriptionId)
 
-                        this._subs.set(randomSubscriptionId, this._pool.sub(
-                            this._relays,
+                        let eoseCount = 0
+                        let eoseSent = false
+                        const eoseTimer = setTimeout(() => {
+                            if (!eoseSent) socket.send(JSON.stringify(["EOSE", subscriptionId]))
+                            eoseSent = true
+                            eoseCount = this._relays.length
+                            clearTimeout(eoseTimer)
+                        }, 2500)
+                        const unsub = this._pool.subscribe(
                             [filters],
-                            {
-                                id: randomSubscriptionId,
-                                skipVerification: true,
-                            }
-                        ))
+                            this._relays,
+                            (event, isAfterEose, relayURL) => {
+                                const { relayPool, relays, ...e } = event
+                                socket.send(JSON.stringify(["EVENT", subscriptionId, e]))
+                            },
+                            undefined,
+                            (events, relayURL) => {
+                                eoseCount++
+                                if (!eoseSent && eoseCount === this._relays.length) {
+                                    eoseSent = true
+                                    socket.send(JSON.stringify(["EOSE", subscriptionId]))
+                                }
+                            }, { dontLogSubscriptions: true }
+                        )
 
-                        this._subs.get(randomSubscriptionId)?.on('event', (data: Event) => {
-                            socket.send(JSON.stringify(["EVENT", subscriptionId, data]))
-                        })
-                        this._subs.get(randomSubscriptionId)?.on('eose', () => {
-                            socket.send(JSON.stringify(["EOSE", subscriptionId]))
-                        })
+                        this._subs.set(randomSubscriptionId, unsub)
                     }
                     else if (parsed[0] === 'CLOSE') {
                         const subscriptionId = parsed[1]
 
                         const randomSubscriptionId = this._cache.get(`${socket.connectionId}:${subscriptionId}`)
                         if (randomSubscriptionId) {
-                            this._subs.get(randomSubscriptionId)?.unsub()
+                            const unsub = this._subs.get(randomSubscriptionId)
+                            if (unsub) unsub()
                             this._subs.delete(randomSubscriptionId)
 
                             this._cache.delete(`${socket.connectionId}:${subscriptionId}`)
@@ -99,22 +107,31 @@ class WebSocketServer {
                     }
                     else if (parsed[0] === 'EVENT') {
                         const event = parsed[1] as unknown as Event
-                        let pubs = this._pool.publish(this._relays, event)
-                        pubs.forEach(pub => {
-                            pub.on('ok', () => {
-                                socket.send(JSON.stringify(["OK", event.id, true, ""]))
-                                pub.unpub()
-                            })
-                            pub.on('failed', () => {
-                                // Send NOTICE?
-                                pub.unpub()
-                            })
-                            const unpubTimer = setTimeout(() => {
-                                pub?.unpub()
-                                clearTimeout(unpubTimer)
-                            }, 10000)
-                        }
+
+                        let publishConfrimed = false
+                        const unsubPublish = this._pool.subscribe(
+                            [{ ids: [event.id] }],
+                            this._relays,
+                            (event, isAfterEose, relayURL) => {
+                                if (!publishConfrimed) {
+                                    socket.send(JSON.stringify(["OK", event.id, true, ""]))
+                                    publishConfrimed = true
+                                    unsubPublish()
+                                }
+                            },
+                            undefined,
+                            undefined
                         )
+
+                        this._pool.publish(event, this._relays)
+
+                        const publishTimer = setTimeout(() => {
+                            if (!publishConfrimed) {
+                                socket.send(JSON.stringify(["NOTICE", "Event not published in time"]))
+                                unsubPublish()
+                            }
+                            clearTimeout(publishTimer)
+                        }, 2500)
                     }
                     else {
                         throw new Error(`Invalid event ${data.toString()}`)
@@ -125,7 +142,8 @@ class WebSocketServer {
                         if (key.startsWith(socket.connectionId)) {
                             const randomSubscriptionId = this._cache.get(key)
                             if (randomSubscriptionId) {
-                                this._subs.get(randomSubscriptionId)?.unsub()
+                                const unsub = this._subs.get(randomSubscriptionId)
+                                if (unsub) unsub()
                                 this._subs.delete(randomSubscriptionId)
                             }
                             this._cache.delete(key)
@@ -140,7 +158,8 @@ class WebSocketServer {
                     if (key.startsWith(socket.connectionId)) {
                         const randomSubscriptionId = this._cache.get(key)
                         if (randomSubscriptionId) {
-                            this._subs.get(randomSubscriptionId)?.unsub()
+                            const unsub = this._subs.get(randomSubscriptionId)
+                            if (unsub) unsub()
                             this._subs.delete(randomSubscriptionId)
                         }
                         this._cache.delete(key)
@@ -153,8 +172,8 @@ class WebSocketServer {
     public async getRelays(): Promise<{ url: string, connected: boolean }[]> {
         let relays: { url: string, connected: boolean }[] = []
         for (const relayUrl of this._relays) {
-            const relay = await this._pool.ensureRelay(relayUrl)
-            relays = [...relays, { url: relay.url, connected: relay.status === 1 ? true : false }]
+            // const relay = await this._pool.ensureRelay(relayUrl)
+            // relays = [...relays, { url: relay.url, connected: relay.status === 1 ? true : false }]
         }
         return relays
     }
