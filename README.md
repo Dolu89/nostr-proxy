@@ -46,7 +46,7 @@ node server.js
 TODO
 
 ## Known issues
-- Sometimes the proxy runs out of memory. Please help.
+- None?
 
 ## Learn More
 
