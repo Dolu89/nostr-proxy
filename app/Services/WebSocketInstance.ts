@@ -1,6 +1,6 @@
 import ws from 'ws'
 import Server from '@ioc:Adonis/Core/Server'
-import NostrSocket from './NostrSocket'
+import WebSocketHandler from './WebSocketHandler'
 
 class Ws {
     public ws: ws.Server
@@ -17,7 +17,7 @@ class Ws {
 
         this.booted = true
         this.ws = new ws.Server({ server: Server.instance! })
-        await NostrSocket.boot()
+        await WebSocketHandler.boot()
     }
 }
 

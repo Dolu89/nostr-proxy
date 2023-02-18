@@ -1,7 +1,7 @@
 import cron from "node-cron";
-import NostrSocket from "../app/Services/NostrSocket";
+import WebSocketHandler from "../app/Services/WebSocketHandler";
 
-cron.schedule('*/1 * * * *', async () => {
-    if (!NostrSocket.booted) return
-    await NostrSocket.initRelays()
+cron.schedule('*/5 * * * *', async () => {
+    if (!WebSocketHandler.booted) return
+    await WebSocketHandler.initRelays()
 });
