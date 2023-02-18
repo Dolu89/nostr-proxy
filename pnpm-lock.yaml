@@ -25,6 +25,7 @@ specifiers:
   eslint-plugin-adonis: ^2.1.1
   eslint-plugin-prettier: ^4.2.1
   node-cron: ^3.0.2
+  nostr-relaypool: 0.4.17
   nostr-tools: ^1.4.1
   pino-pretty: ^9.2.0
   prettier: ^2.8.4
@@ -51,6 +52,7 @@ dependencies:
   '@noble/secp256k1': 1.7.1
   '@types/uuid': 9.0.0
   node-cron: 3.0.2
+  nostr-relaypool: 0.4.17_ws@8.12.0
   nostr-tools: 1.4.1
   proxy-addr: 2.0.7
   reflect-metadata: 0.1.13
@@ -5508,6 +5510,14 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
+  /isomorphic-ws/5.0.0_ws@8.12.0:
+    resolution: {integrity: sha512-muId7Zzn9ywDsyXgTIafTry2sV3nySZeUDe6YedVd1Hvuuep5AsIlqK+XefWpYTyJG5e503F2xIuT2lcU6rCSw==}
+    peerDependencies:
+      ws: '*'
+    dependencies:
+      ws: 8.12.0
+    dev: false
+
   /jest-diff/25.5.0:
     resolution: {integrity: sha512-z1kygetuPiREYdNIumRpAHY6RXiGmp70YHptjdaxTWGmA085W3iCnXNx0DhflK3vwrKmrRWyY1wUpkPMVxMK7A==}
     engines: {node: '>= 8.3'}
@@ -6186,6 +6196,16 @@ packages:
   /normalize-url/6.1.0:
     resolution: {integrity: sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==}
     engines: {node: '>=10'}
+
+  /nostr-relaypool/0.4.17_ws@8.12.0:
+    resolution: {integrity: sha512-w3ttz7ZVpSNDBe0Nw0UdJP0oO8eBDpaf0384OOj4xyWARTjnaznulvHhYedYurEPK39P1yrJCo/omNatE79mRQ==}
+    dependencies:
+      isomorphic-ws: 5.0.0_ws@8.12.0
+      nostr-tools: 1.4.1
+      safe-stable-stringify: 2.4.2
+    transitivePeerDependencies:
+      - ws
+    dev: false
 
   /nostr-tools/1.4.1:
     resolution: {integrity: sha512-pFAbVNtRMfW5ducUmk0f20IZv4a6pXYchBQKuA6D3x6sg83KoWipuiAie/gfOgrkoCsBLV14DmpWsVmo3N7WXQ==}
@@ -7362,6 +7382,11 @@ packages:
     dependencies:
       ret: 0.1.15
     dev: true
+
+  /safe-stable-stringify/2.4.2:
+    resolution: {integrity: sha512-gMxvPJYhP0O9n2pvcfYfIuYgbledAOJFcqRThtPRmjscaipiwcwPPKLytpVzMkG2HAN87Qmo2d4PtGiri1dSLA==}
+    engines: {node: '>=10'}
+    dev: false
 
   /safer-buffer/2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
