@@ -3,7 +3,6 @@ import Env from "@ioc:Adonis/Core/Env"
 import { WebSocket } from "ws";
 import WebSocketInstance from "./WebSocketInstance"
 import { RelayPool, Event } from "nostr-relaypool";
-import { Sub } from "nostr-relaypool/relay";
 import { Filter } from "@dolu/nostr-tools";
 // import { SimplePool } from "./Simplepool";
 
@@ -23,7 +22,7 @@ class WebSocketServer {
     constructor() {
         this.booted = false
         this._relays = [...Env.get('RELAYS').split(',')]
-        this._pool = new RelayPool(this._relays, { keepSignature: true, dontLogSubscriptions: true })
+        this._pool = new RelayPool(this._relays, { keepSignature: true, dontLogSubscriptions: true, noCache: true })
 
         this._cache = new Map()
         this._subs = new Map()
@@ -88,7 +87,7 @@ class WebSocketServer {
                                     eoseSent = true
                                     socket.send(JSON.stringify(["EOSE", subscriptionId]))
                                 }
-                            }, { dontLogSubscriptions: true }
+                            }, { logAllEvents: false }
                         )
 
                         this._subs.set(randomSubscriptionId, unsub)
