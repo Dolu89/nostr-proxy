@@ -170,9 +170,8 @@ class WebSocketServer {
 
     public async getRelays(): Promise<{ url: string, connected: boolean }[]> {
         let relays: { url: string, connected: boolean }[] = []
-        for (const relayUrl of this._relays) {
-            // const relay = await this._pool.ensureRelay(relayUrl)
-            // relays = [...relays, { url: relay.url, connected: relay.status === 1 ? true : false }]
+        for (const [url, status] of this._pool.getRelayStatuses()) {
+            relays = [...relays, { url: url, connected: status === 1 ? true : false }]
         }
         return relays
     }
