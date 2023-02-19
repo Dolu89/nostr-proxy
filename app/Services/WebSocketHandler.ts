@@ -65,30 +65,37 @@ class WebSocketServer {
 
                         this._cache.set(`${socket.connectionId}:${subscriptionId}`, randomSubscriptionId)
 
-                        let eoseCount = 0
+                        let eventsSent = 0
                         let eoseSent = false
-                        const eoseTimer = setTimeout(() => {
-                            if (!eoseSent) socket.send(JSON.stringify(["EOSE", subscriptionId]))
-                            eoseSent = true
-                            eoseCount = this._relays.length
-                            clearTimeout(eoseTimer)
-                        }, 2500)
+
+                        let limit = 100
+                        if (filters.limit && filters.limit <= limit) {
+                            limit = filters.limit
+                        }
+
                         const unsub = this._pool.subscribe(
                             [filters],
                             this._relays,
                             (event, isAfterEose, relayURL) => {
                                 const { relayPool, relays, ...e } = event
+                                eventsSent++
                                 socket.send(JSON.stringify(["EVENT", subscriptionId, e]))
-                            },
-                            undefined,
-                            (events, relayURL) => {
-                                eoseCount++
-                                if (!eoseSent && eoseCount === this._relays.length) {
+                                if (!eoseSent && eventsSent === limit) {
                                     eoseSent = true
                                     socket.send(JSON.stringify(["EOSE", subscriptionId]))
                                 }
-                            }, { logAllEvents: false }
+                            },
+                            undefined,
+                            undefined,
+                            { logAllEvents: false }
                         )
+
+                        const eoseTimer = setTimeout(() => {
+                            if (eoseSent) return
+                            eoseSent = true
+                            socket.send(JSON.stringify(["EOSE", subscriptionId]))
+                            clearTimeout(eoseTimer)
+                        }, 2500)
 
                         this._subs.set(randomSubscriptionId, unsub)
                     }
