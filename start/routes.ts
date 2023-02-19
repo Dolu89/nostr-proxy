@@ -3,6 +3,7 @@ import Env from "@ioc:Adonis/Core/Env"
 import NostrSocket from '../app/Services/WebSocketHandler'
 import WebSocketHandler from '../app/Services/WebSocketHandler'
 // import NostrPool from '../app/Services/NostrPool'
+import v8 from 'v8'
 
 Route.get('/', async ({ view }) => {
   if (!NostrSocket.booted) return { message: 'Nostr Proxy is booting...' }
@@ -18,4 +19,10 @@ Route.get('/stats', async () => {
 
   const stats = NostrSocket.getStats()
   return stats
+})
+
+Route.get('/heap', async () => {
+  if (!NostrSocket.booted) return { message: 'Nostr Proxy is booting...' }
+
+  v8.writeHeapSnapshot('./public/heap.heapsnapshot')
 })
