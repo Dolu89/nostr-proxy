@@ -22,7 +22,7 @@ class WebSocketServer {
     constructor() {
         this.booted = false
         this._relays = [...Env.get('RELAYS').split(',')]
-        this._pool = new RelayPool(this._relays, { keepSignature: true, dontLogSubscriptions: true, noCache: true, skipVerification: true })
+        this._pool = new RelayPool(this._relays, { skipVerification: true })
 
         this._cache = new Map()
         this._subs = new Map()
